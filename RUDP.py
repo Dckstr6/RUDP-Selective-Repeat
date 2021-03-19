@@ -20,23 +20,26 @@ class Connection:
 		self.port = port
 		self.timeoutval = timeoutval
 
-	def connect(self):
-		self.s.connect((str(self.target_host),int(self.port)))
-
 	def send(self):
-		msglen = len(self.packet)
-		self.s.sendto(self.packet,(self.target_host,self.port))
+		self.s.sendto(self.packet,(str(self.target_host),int(self.port)))
+
+	def bind(self):
+		self.s.bind((str(self.target_host),int(self.port)))
 
 	def recv(self):
 		while True:
 			chunk,addr = self.s.recvfrom(65535)
-			if not chunk:
+			if(addr!=self.target_host):
+				RuntimeError("Clients not matching")
+			if not chunk:   #Have to modify this
 				break
-			fragments.append(chunk)
+			self.fragments.append(chunk)
 
 	def settimeout(self):
+		self.s.settimeout(self.timeoutval)
 
-
+	def close(self):
+		self.s.close()
 
 
 class Packet:
@@ -67,6 +70,7 @@ class Packet:
 	def printPacket(self):
 		print(self.packet)
 
+	def computeChecksum(self):
+		
+
 if __name__ == '__main__':
-	p = Packet(1,1,1,1,1,"abcd")
-	p.printPacket()
