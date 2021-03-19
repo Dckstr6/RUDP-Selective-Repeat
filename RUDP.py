@@ -71,6 +71,5 @@ class Packet:
 		print(self.packet)
 
 	def computeChecksum(self):
-		
 
 if __name__ == '__main__':
