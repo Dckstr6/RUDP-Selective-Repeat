@@ -4,7 +4,7 @@ class Connection:
 	buffer_size = 0
 	window_size = 0
 	packet_size = 0
-	packet = NULL
+	packet = 0
 	s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 
 	def __init__(self,buffer_size,window_size,packet_size,packet):
@@ -39,7 +39,7 @@ class Packet:
 		self.packet += self.payload
 
 	def printPacket(self):
-		print(packet)
+		print(self.packet)
 
 if __name__ == '__main__':
 	p = Packet(1,1,1,1,1,"abcd")
