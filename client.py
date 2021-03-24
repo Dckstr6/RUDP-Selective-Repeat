@@ -1,18 +1,15 @@
 import socket
 import RUDP
 
+class Client:
+    def __init__(self):
+        request = "sample.txt"
+        message = "abcd"
 
-request = "sample.txt"
-message = "abcd"
-
-s = RUDP.Connection()
-count = 0
-with open('sample.txt','r') as file:
-    for line in file:
-        p = RUDP.Packet(0,0,0,count,0,line)
-        s.send(p,"127.0.0.1",65432)
-        count += 1
-
-
-
-s.close()
+        s = RUDP.Connection()
+        s.bind("127.0.0.1",65431)
+        s.connect("127.0.0.1",65432,request)
+        while(True):
+            line = s.recv()
+            print(line)
+        s.close()

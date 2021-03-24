@@ -3,6 +3,7 @@ import threading
 from _thread import *
 from socketserver import ThreadingMixIn
 import base64
+import mmh3
 
 class Connection:
 	buffer_size = 0
@@ -11,27 +12,44 @@ class Connection:
 	packet_size = 65535
 	s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 	timeoutval = 0
-	send_base = 0
-	send_head = 2
-	send_current_packet = 0
-	sending_list = {}
-	receive_list = {}
 
-	def __init__(self,buffer_size=0,window_size=0,packet_size=0,timeoutval=0):
+	def __init__(self,buffer_size=0,window_size=0,packet_size=1024,timeoutval=0):
 		self.buffer_size = buffer_size
 		self.window_size = window_size
 		self.packet_size = packet_size
 		self.timeoutval = timeoutval
-		self.send_head = self.send_base + window_size
 
+	def connect(self,target_host,port,request):
+		syn_pac = Packet(1,0,0,0,0,"")
+		self.send(syn_pac,target_host,port)
+		print("Client Connection Request Sent")
+		ack = self.recv()
+		if(ack.split("~")[1]=="1" and ack.split("~")[3]=="1"):
+			print("Server Connection ACK received")
+			req_pac = Packet(0,0,0,0,0,str(request))
+			self.send(req_pac,target_host,port)
+			print("File Request Sent")
+		return
 
-	# Method to actually send data
+	def listen(self,target_host,port):
+		conn_req = self.recv()
+		if(conn_req.split("~")[1]=="1" and conn_req.split("~")[4]=="0"):
+			print("Client Connection request received")
+			ack_pac = Packet(1,0,1,0,0,"")
+			print("Server connection ACK sent")
+			self.send(ack_pac,target_host,port)
+			req_pac = self.recv()
+			print(f"Client File request received:")
+			print(f"File name requested by client is {req_pac.split('~')[8]}")
+			return req_pac.split("~")[8]
+		return 0
+
 	def send(self,packet,target_host,port):
 		packet_params = packet.packet.split('~')
 		pno = packet_params[4]
 		packet_bytes = packet.packet.encode("ascii")
 		base64_bytes = base64.b64encode(packet_bytes)
-		# base64_string = base64_bytes.decode("ascii")
+		base64_string = base64_bytes.decode("ascii")
 		self.s.sendto(base64_bytes,(str(target_host),int(port)))
 		print(f"Sent packet {pno}")
 
@@ -39,17 +57,22 @@ class Connection:
 		self.s.bind((str(target_host),int(port)))
 
 	def recv(self):
-		while(True):
-			chunk,addr = self.s.recvfrom(1024)
-			# base64_string = str(chunk)
-			# base64_bytes = chunk.decode("ascii")
-			ascii_string_bytes = base64.b64decode(chunk)
-			recvd_string = ascii_string_bytes.decode("ascii")
-			packet_params = recvd_string.split('~')
-			print(f"Received string {recvd_string}")
-			pno = packet_params[4]
-			print(f"Received Packet {pno}")
-			# print("Computing Checksum.....")
+		chunk,addr = self.s.recvfrom(1024)
+		base64_string = str(chunk)
+		base64_bytes = chunk.decode("ascii")
+		ascii_string_bytes = base64.b64decode(chunk)
+		recvd_string = ascii_string_bytes.decode("ascii")
+		packet_params = recvd_string.split('~')
+		# print(f"Received string {recvd_string}")
+		pno = packet_params[4]
+		print(f"Received Packet {pno}")
+		# print(f"Body is {packet_params[8]}")
+		checksum = packet_params[7]
+		if(self.verifyChecksum(packet_params[8],packet_params[7])==False):
+			print(f"Packet {pno} compromised")
+		else:
+			print(f"Packet {pno} ok")
+		return recvd_string
 
 
 	def settimeout(self):
@@ -57,6 +80,13 @@ class Connection:
 
 	def close(self):
 		self.s.close()
+
+	def verifyChecksum(self,body,chk):
+		cc =  (((mmh3.hash(body))) % (1<<16))
+		if(int(cc)==int(chk)):
+			return True
+		else:
+			return False
 
 
 class Packet:
@@ -68,6 +98,7 @@ class Packet:
 	ACK = 0
 	PNO = 0
 	ANO = 0
+	body_length = 0
 	checksum = ""
 
 	def __init__(self,SYN,FIN,ACK,PNO,ANO,payload):
@@ -85,9 +116,18 @@ class Packet:
 		self.header += str(ANO)
 		self.header += "~"
 		self.payload = payload
+		self.body_length = len(payload)
+		self.header += str(self.body_length)
+		self.header += "~"
+		self.checksum = self.computeChecksum()
+		self.header += str(self.checksum)
+		self.header += "~"
 		self.packet += self.header
 		self.packet += self.payload
 
 	def printPacket(self):
 		print(self.packet)
+
+	def computeChecksum(self):
+		return (((mmh3.hash(self.payload))) % (1<<16))
 
