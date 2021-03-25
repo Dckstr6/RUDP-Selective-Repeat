@@ -50,11 +50,9 @@ class Server:
     def send_this_packet(self,packet_no):
         while(True):
             packet_body = ""
-            i = 0
-            while(i<self.body_size and self.last_sent_index < len(self.total_data)):
-                packet_body += str(self.total_data[self.last_sent_index])
-                self.last_sent_index += 1
-                i += 1
+            # resending data going wrong due to last_sent_index
+            for i in range((self.body_size*packet_no),min(self.body_size*(packet_no+1),len(self.total_data))):
+                packet_body += str(self.total_data[i])
             sending_packet = RUDP.Packet(0,0,0,packet_no,0,packet_body)
             self.s.send(sending_packet,self.target_host,self.target_port)
             time.sleep(self.sleep_time)
@@ -96,7 +94,3 @@ if __name__ == '__main__':
 #     "clientPortNo": 50126,
 #     "reqFileName": "Rushabh.mp4"
 # }
-
-# Gaurang Gupta2:17 PM
-# body = self.data[packNum *
-#                              self.bodySize: min(((packNum + 1) * self.bodySize), self.lenOfData)]

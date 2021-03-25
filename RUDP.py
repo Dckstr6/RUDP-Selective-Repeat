@@ -11,7 +11,7 @@ class Connection:
 	seq_space = 6
 	packet_size = 65535
 	s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-	timeoutval = 0
+	timeoutval = 2
 
 	def __init__(self,buffer_size=0,window_size=0,packet_size=1024,timeoutval=0):
 		self.buffer_size = buffer_size
@@ -73,7 +73,7 @@ class Connection:
 		if(self.verifyChecksum(packet_params[8],packet_params[7])==False):
 			print(f"Packet {pno} compromised")
 			return
-		elif(packet_params[1]=="0" and packet_params[3]=="0"):
+		elif(packet_params[1]=="0" and packet_params[3]=="0"):  # Add packet number here to check for packet loss
 			print(f"Packet {pno} ok")
 			ack_pack = Packet(0,0,1,0,pno,"")
 			self.send(ack_pack,target_host,port)
