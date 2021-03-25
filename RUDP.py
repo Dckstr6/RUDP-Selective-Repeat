@@ -23,22 +23,22 @@ class Connection:
 		syn_pac = Packet(1,0,0,0,0,"")
 		self.send(syn_pac,target_host,port)
 		print("Client Connection Request Sent")
-		ack = self.recv()
+		ack = self.recv(target_host,port)
 		if(ack.split("~")[1]=="1" and ack.split("~")[3]=="1"):
 			print("Server Connection ACK received")
-			req_pac = Packet(0,0,0,0,0,str(request))
+			req_pac = Packet(1,0,0,0,0,str(request))
 			self.send(req_pac,target_host,port)
 			print("File Request Sent")
 		return
 
 	def listen(self,target_host,port):
-		conn_req = self.recv()
+		conn_req = self.recv(target_host,port)
 		if(conn_req.split("~")[1]=="1" and conn_req.split("~")[4]=="0"):
 			print("Client Connection request received")
 			ack_pac = Packet(1,0,1,0,0,"")
 			print("Server connection ACK sent")
 			self.send(ack_pac,target_host,port)
-			req_pac = self.recv()
+			req_pac = self.recv(target_host,port)
 			print(f"Client File request received:")
 			print(f"File name requested by client is {req_pac.split('~')[8]}")
 			return req_pac.split("~")[8]
@@ -51,12 +51,15 @@ class Connection:
 		base64_bytes = base64.b64encode(packet_bytes)
 		base64_string = base64_bytes.decode("ascii")
 		self.s.sendto(base64_bytes,(str(target_host),int(port)))
-		print(f"Sent packet {pno}")
+		if(packet_params[3]=="0" and packet_params[1]!="1"):
+			print(f"Sent packet {pno}")
+		elif(packet_params[3]=="1" and packet_params[1]!="1"):
+			print(f"Sent ACK {packet_params[5]}")
 
 	def bind(self,target_host,port):
 		self.s.bind((str(target_host),int(port)))
 
-	def recv(self):
+	def recv(self,target_host,port):
 		chunk,addr = self.s.recvfrom(1024)
 		base64_string = str(chunk)
 		base64_bytes = chunk.decode("ascii")
@@ -65,13 +68,15 @@ class Connection:
 		packet_params = recvd_string.split('~')
 		# print(f"Received string {recvd_string}")
 		pno = packet_params[4]
-		print(f"Received Packet {pno}")
 		# print(f"Body is {packet_params[8]}")
 		checksum = packet_params[7]
 		if(self.verifyChecksum(packet_params[8],packet_params[7])==False):
 			print(f"Packet {pno} compromised")
-		else:
+			return
+		elif(packet_params[1]=="0" and packet_params[3]=="0"):
 			print(f"Packet {pno} ok")
+			ack_pack = Packet(0,0,1,0,pno,"")
+			self.send(ack_pack,target_host,port)
 		return recvd_string
 
 
@@ -131,3 +136,19 @@ class Packet:
 	def computeChecksum(self):
 		return (((mmh3.hash(self.payload))) % (1<<16))
 
+
+
+# {
+#     "bufLen": 20,
+#     "windowSize": 10,
+#     "globalTimer": 1000000,
+#     "packetSize": 10024,
+#     "reTransCount": 3,
+#     "serverIpAddr": "127.0.0.1",
+#     "serverPortNo": 50125,
+#     "clientIpAddr": "127.0.0.1",
+#     "clientPortNo": 50126,
+#     "reqFileName": "Rushabh.mp4"
+# }
+
+# body_size = packet_size - 1024
