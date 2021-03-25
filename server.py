@@ -50,7 +50,6 @@ class Server:
     def send_this_packet(self,packet_no):
         while(True):
             packet_body = ""
-            # resending data going wrong due to last_sent_index
             for i in range((self.body_size*packet_no),min(self.body_size*(packet_no+1),len(self.total_data))):
                 packet_body += str(self.total_data[i])
             sending_packet = RUDP.Packet(0,0,0,packet_no,0,packet_body)
@@ -83,8 +82,8 @@ if __name__ == '__main__':
 
 
 # {
-#     "bufLen": 20, 
-#     "windowSize": 10, 
+#     "bufLen": 20,
+#     "windowSize": 10,
 #     "globalTimer": 1000000,
 #     "packetSize": 10024,
 #     "reTransCount": 3,

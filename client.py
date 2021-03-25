@@ -19,26 +19,16 @@ class Client:
         self.request = str(file_request)
         self.s.bind(self.self_host,self.self_port)
         self.s.connect(self.target_host,self.target_port,self.request)
+        # file = open("output.txt","w")
         while(True):
             line = self.s.recv(target_host,target_port)
             pno = int(line.split("~")[4])
             body = line.split("~")[8]
-            print(f"Body recevied in packet {pno}: {body}")
+            print(f"Body received in packet {pno}: {body}")
+            body_parts[pno] = body
         self.s.close()
 
 
 if __name__ == '__main__':
     c1 = Client("127.0.0.1",65431,"127.0.0.1",65432,"sample.txt")
 
-
-
-# request = "sample.txt"
-# message = "abcd"
-
-# s = RUDP.Connection()
-# s.bind("127.0.0.1",65431)
-# s.connect("127.0.0.1",65432,request)
-# while(True):
-#     line = s.recv()
-#     print(line)
-# s.close()

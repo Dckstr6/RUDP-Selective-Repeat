@@ -66,9 +66,7 @@ class Connection:
 		ascii_string_bytes = base64.b64decode(chunk)
 		recvd_string = ascii_string_bytes.decode("ascii")
 		packet_params = recvd_string.split('~')
-		# print(f"Received string {recvd_string}")
 		pno = packet_params[4]
-		# print(f"Body is {packet_params[8]}")
 		checksum = packet_params[7]
 		if(self.verifyChecksum(packet_params[8],packet_params[7])==False):
 			print(f"Packet {pno} compromised")
@@ -137,18 +135,3 @@ class Packet:
 		return (((mmh3.hash(self.payload))) % (1<<16))
 
 
-
-# {
-#     "bufLen": 20,
-#     "windowSize": 10,
-#     "globalTimer": 1000000,
-#     "packetSize": 10024,
-#     "reTransCount": 3,
-#     "serverIpAddr": "127.0.0.1",
-#     "serverPortNo": 50125,
-#     "clientIpAddr": "127.0.0.1",
-#     "clientPortNo": 50126,
-#     "reqFileName": "Rushabh.mp4"
-# }
-
-# body_size = packet_size - 1024
