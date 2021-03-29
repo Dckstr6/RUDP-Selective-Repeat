@@ -25,7 +25,7 @@ class Client:
             pno = int(line.split("~")[4])
             body = line.split("~")[8]
             print(f"Body received in packet {pno}: {body}")
-            body_parts[pno] = body
+            self.body_parts[pno] = body
         self.s.close()
 
 

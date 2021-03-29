@@ -4,7 +4,7 @@ import math
 import time
 import threading
 class Server:
-
+    mutex = threading.Lock()
     target_host = ""
     target_port = 0
     self_host = ""
@@ -44,22 +44,35 @@ class Server:
 
         for i in range(self.total_packets):
             self.all_threads[i].join()
+        thread_ack.join()
 
         self.s.close()
 
     def send_this_packet(self,packet_no):
-        while(True):
-            packet_body = ""
-            for i in range((self.body_size*packet_no),min(self.body_size*(packet_no+1),len(self.total_data))):
-                packet_body += str(self.total_data[i])
-            sending_packet = RUDP.Packet(0,0,0,packet_no,0,packet_body)
-            self.s.send(sending_packet,self.target_host,self.target_port)
-            time.sleep(self.sleep_time)
-            if(self.ack_array[packet_no]==1):
+        retries = 0
+        flag = 0
+        print(f"Trying packet {packet_no} with send base {self.s.send_base} and send head {self.s.send_head}")
+        # Perform window checking here
+        while(flag==0):
+            if(packet_no >= self.s.send_base and packet_no <= self.s.send_head):
+                print(f"Able to send packet {packet_no}")
+                flag = 1
+                while(True):
+                    packet_body = ""
+                    for i in range((self.body_size*packet_no),min(self.body_size*(packet_no+1),len(self.total_data))):
+                        packet_body += str(self.total_data[i])
+                    sending_packet = RUDP.Packet(0,0,0,packet_no,0,packet_body)
+                    self.s.send(sending_packet,self.target_host,self.target_port)
+                    time.sleep(self.sleep_time)
+                    if(self.ack_array[packet_no]==1):
+                        break
+                    else:
+                        print(f"ACK for packet {packet_no} is not received, resending packet {retries}")
+                        retries += 1
+                        self.s.send(sending_packet,self.target_host,self.target_port)
+                        continue
                 break
             else:
-                print(f"ACK for packet {packet_no} is not received, resending packet")
-                self.s.send(sending_packet,self.target_host,self.target_port)
                 continue
         return
 
@@ -71,6 +84,16 @@ class Server:
                 print(f"Received ACK for packet {ack_no}")
                 self.ack_array[ack_no] = 1
                 self.number_of_acked_packets += 1
+                if((ack_no == self.s.send_base)):
+                    self.mutex.acquire()
+                    try:
+                        if((self.s.send_base < self.total_packets - self.s.window_size)):
+                            self.s.send_base += 1
+                            self.s.send_head += 1
+                            print(f"Send base is now {self.s.send_base}")
+                            print(f"Send head is now {self.s.send_head}")
+                    finally:
+                        self.mutex.release()
         return
 
 if __name__ == '__main__':
