@@ -3,6 +3,7 @@ import RUDP
 import math
 import time
 import threading
+import os
 class Server:
     mutex = threading.Lock()
     target_host = ""
@@ -11,6 +12,7 @@ class Server:
     self_port = 0
     total_packets = 0
     number_of_acked_packets = 0
+    last_received_time = 0
     packet_size = 30
     body_size = 10
     last_sent_index = 0
@@ -19,7 +21,7 @@ class Server:
     ack_array = list()
     total_data = list()
     all_threads = list()
-    sleep_time = 2
+    sleep_time = 3
 
     def __init__(self,self_host,self_port,target_host,target_port):
         self.target_host = str(target_host)
@@ -36,7 +38,8 @@ class Server:
 
         thread_ack = threading.Thread(target=self.listen_for_ack,args=())
         thread_ack.start()
-
+        # thread_timer = threading.Thread(target=self.global_timer,args=())
+        # thread_timer.start()
         for i in range(self.total_packets):
             tx = threading.Thread(target=self.send_this_packet,args=(i,))
             tx.start()
@@ -46,13 +49,15 @@ class Server:
             self.all_threads[i].join()
         thread_ack.join()
 
+        self.end_connection()
         self.s.close()
+        os._exit(0)
+
 
     def send_this_packet(self,packet_no):
         retries = 0
         flag = 0
         print(f"Trying packet {packet_no} with send base {self.s.send_base} and send head {self.s.send_head}")
-        # Perform window checking here
         while(flag==0):
             if(packet_no >= self.s.send_base and packet_no <= self.s.send_head):
                 print(f"Able to send packet {packet_no}")
@@ -66,11 +71,15 @@ class Server:
                     time.sleep(self.sleep_time)
                     if(self.ack_array[packet_no]==1):
                         break
-                    else:
-                        print(f"ACK for packet {packet_no} is not received, resending packet {retries}")
+                    elif(retries < self.s.max_retransmits):
+                        print(f"ACK for packet {packet_no} is not received, resending packet again ({retries})")
                         retries += 1
                         self.s.send(sending_packet,self.target_host,self.target_port)
                         continue
+                    else:
+                        print("Exceeded maximum retransmits, terminating connection......")
+                        self.end_connection()
+                        os._exit(0)
                 break
             else:
                 continue
@@ -84,7 +93,10 @@ class Server:
                 print(f"Received ACK for packet {ack_no}")
                 self.ack_array[ack_no] = 1
                 self.number_of_acked_packets += 1
-                if((ack_no == self.s.send_base)):
+                self.mutex.acquire()
+                self.last_received_time = time.time()
+                self.mutex.release()
+                if((self.ack_array[self.s.send_base]==1)):
                     self.mutex.acquire()
                     try:
                         if((self.s.send_base < self.total_packets - self.s.window_size)):
@@ -94,6 +106,18 @@ class Server:
                             print(f"Send head is now {self.s.send_head}")
                     finally:
                         self.mutex.release()
+        return
+
+    def global_timer(self):
+        while(True):
+            if(time.time() - self.last_received_time) >= self.s.timeoutval:
+                print("Global Timer exceeded")
+                os._exit(0)
+
+    def end_connection(self):
+        fin_packet = RUDP.Packet(0,1,0,0,0,"")
+        self.s.send(fin_packet,self.target_host,self.target_port)
+        print("Server ending connection")
         return
 
 if __name__ == '__main__':

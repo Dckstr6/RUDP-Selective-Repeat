@@ -4,22 +4,24 @@ from _thread import *
 from socketserver import ThreadingMixIn
 import base64
 import mmh3
+import os
 
 class Connection:
 	buffer_size = 0
-	window_size = 3
-	seq_space = 6
+	window_size = 0
+	max_retransmits = 0
 	send_base = 0
 	send_head = 0
-	packet_size = 65535
+	packet_size = 0
 	s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-	timeoutval = 2
+	timeoutval = 0
 
-	def __init__(self,buffer_size=0,window_size=3,packet_size=1024,timeoutval=0):
+	def __init__(self,buffer_size=0,window_size=3,packet_size=1024,timeoutval=3000,max_retransmits = 5):
 		self.buffer_size = buffer_size
 		self.window_size = window_size
 		self.packet_size = packet_size
 		self.timeoutval = timeoutval
+		self.max_retransmits = max_retransmits
 		self.send_head = self.send_base + self.window_size - 1
 
 	def connect(self,target_host,port,request):
@@ -74,7 +76,7 @@ class Connection:
 		if(self.verifyChecksum(packet_params[8],packet_params[7])==False):
 			print(f"Packet {pno} compromised")
 			return
-		elif(packet_params[1]=="0" and packet_params[3]=="0"):  # Add packet number here to check for packet loss
+		elif(packet_params[1]=="0" and packet_params[2]=="0" and packet_params[3]=="0" and packet_params[4]!="4"):  # and packet_params[4]!="4" Add packet number here to check for packet loss
 			print(f"Packet {pno} ok")
 			ack_pack = Packet(0,0,1,0,pno,"")
 			self.send(ack_pack,target_host,port)
