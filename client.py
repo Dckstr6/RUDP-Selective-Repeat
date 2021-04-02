@@ -3,6 +3,7 @@ import RUDP
 import os
 import threading
 import time
+from collections import OrderedDict
 
 class Client:
     request = ""
@@ -11,7 +12,8 @@ class Client:
     self_host = ""
     self_port = 0
     s = RUDP.Connection()
-    packet_list = list()
+    # Change packet list from list to dict
+    packet_list = {}
     last_received_time = 0
     write_list = list()
     def __init__(self,self_host,self_port,target_host,target_port,file_request):
@@ -34,10 +36,11 @@ class Client:
             pno = int(line.split("~")[4])
             body = line.split("~")[8]
             print(f"Body received in packet {pno}: {body}")
-            self.packet_list.insert(pno,body)
+            self.packet_list[pno] = body
         self.s.close()
         # print(self.packet_list)
-        for body in self.packet_list:
+        od = OrderedDict(sorted(self.packet_list.items()))
+        for no,body in od.items():
             for word in body:
                 self.write_list.append(word)
         # print(self.write_list)

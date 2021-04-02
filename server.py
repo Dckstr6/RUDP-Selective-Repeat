@@ -34,8 +34,9 @@ class Server:
         with open(file_name,"r") as file:
             self.total_data = [ch for ch in file.read()]
         self.total_packets = math.ceil(len(self.total_data)/(self.body_size))
-        self.ack_array = [0 for i in range(self.total_packets)]
-
+        print(f"Total packets are {self.total_packets}")
+        for i in range(0,self.total_packets):
+            self.ack_array.append(0)
         thread_ack = threading.Thread(target=self.listen_for_ack,args=())
         thread_ack.start()
         # thread_timer = threading.Thread(target=self.global_timer,args=())
@@ -57,7 +58,7 @@ class Server:
     def send_this_packet(self,packet_no):
         retries = 0
         flag = 0
-        print(f"Trying packet {packet_no} with send base {self.s.send_base} and send head {self.s.send_head}")
+        # print(f"Trying packet {packet_no} with send base {self.s.send_base} and send head {self.s.send_head}")
         while(flag==0):
             if(packet_no >= self.s.send_base and packet_no <= self.s.send_head):
                 print(f"Able to send packet {packet_no}")
@@ -91,9 +92,10 @@ class Server:
             if(response.split("~")[3]=="1"):
                 ack_no = int(response.split("~")[5])
                 print(f"Received ACK for packet {ack_no}")
-                self.ack_array[ack_no] = 1
-                self.number_of_acked_packets += 1
                 self.mutex.acquire()
+                if(self.ack_array[ack_no]==0):
+                    self.ack_array[ack_no] = 1
+                    self.number_of_acked_packets += 1
                 self.last_received_time = time.time()
                 self.mutex.release()
                 if((self.ack_array[self.s.send_base]==1)):
@@ -106,6 +108,7 @@ class Server:
                             print(f"Send head is now {self.s.send_head}")
                     finally:
                         self.mutex.release()
+        print("All ACKS Received. Initiating termination")
         return
 
     def global_timer(self):

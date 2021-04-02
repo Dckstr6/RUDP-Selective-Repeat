@@ -65,7 +65,7 @@ class Connection:
 		self.s.bind((str(target_host),int(port)))
 
 	def recv(self,target_host,port):
-		chunk,addr = self.s.recvfrom(1024)
+		chunk,addr = self.s.recvfrom(self.packet_size)
 		base64_string = str(chunk)
 		base64_bytes = chunk.decode("ascii")
 		ascii_string_bytes = base64.b64decode(chunk)
@@ -76,7 +76,7 @@ class Connection:
 		if(self.verifyChecksum(packet_params[8],packet_params[7])==False):
 			print(f"Packet {pno} compromised")
 			return
-		elif(packet_params[1]=="0" and packet_params[2]=="0" and packet_params[3]=="0" and packet_params[4]!="4"):  # and packet_params[4]!="4" Add packet number here to check for packet loss
+		elif(packet_params[1]=="0" and packet_params[2]=="0" and packet_params[3]=="0"):  # and packet_params[4]!="4" Add packet number here to check for packet loss
 			print(f"Packet {pno} ok")
 			ack_pack = Packet(0,0,1,0,pno,"")
 			self.send(ack_pack,target_host,port)
@@ -140,3 +140,5 @@ class Packet:
 		return (((mmh3.hash(self.payload))) % (1<<16))
 
 
+
+#comcast --device lo0 --stop
