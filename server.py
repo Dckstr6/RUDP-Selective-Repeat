@@ -39,8 +39,9 @@ class Server:
             self.ack_array.append(0)
         thread_ack = threading.Thread(target=self.listen_for_ack,args=())
         thread_ack.start()
-        # thread_timer = threading.Thread(target=self.global_timer,args=())
-        # thread_timer.start()
+        self.last_received_time = time.time()
+        thread_timer = threading.Thread(target=self.global_timer,args=())
+        thread_timer.start()
         for i in range(self.total_packets):
             tx = threading.Thread(target=self.send_this_packet,args=(i,))
             tx.start()
@@ -58,7 +59,6 @@ class Server:
     def send_this_packet(self,packet_no):
         retries = 0
         flag = 0
-        # print(f"Trying packet {packet_no} with send base {self.s.send_base} and send head {self.s.send_head}")
         while(flag==0):
             if(packet_no >= self.s.send_base and packet_no <= self.s.send_head):
                 print(f"Able to send packet {packet_no}")
@@ -114,6 +114,9 @@ class Server:
     def global_timer(self):
         while(True):
             if(time.time() - self.last_received_time) >= self.s.timeoutval:
+                print(f"Timeoutval is {self.s.timeoutval}")
+                print(f"Time.Time is {time.time()}")
+                print(f"Last Received Time is {self.last_received_time}")
                 print("Global Timer exceeded")
                 os._exit(0)
 

@@ -4,6 +4,7 @@ from _thread import *
 from socketserver import ThreadingMixIn
 import base64
 import mmh3
+import time
 import os
 
 class Connection:
@@ -16,7 +17,7 @@ class Connection:
 	s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 	timeoutval = 0
 
-	def __init__(self,buffer_size=0,window_size=3,packet_size=1024,timeoutval=3000,max_retransmits = 5):
+	def __init__(self,buffer_size=0,window_size=3,packet_size=1024,timeoutval=10,max_retransmits = 5):
 		self.buffer_size = buffer_size
 		self.window_size = window_size
 		self.packet_size = packet_size
@@ -28,10 +29,18 @@ class Connection:
 		syn_pac = Packet(1,0,0,0,0,"")
 		self.send(syn_pac,target_host,port)
 		print("Client Connection Request Sent")
-		ack = self.recv(target_host,port)
+		ack = ""
+		while(True):
+			time.sleep(1)
+			ack = self.recv(target_host,port)
+			if ack is not None:
+				break
+			else:
+				self.send(syn_pac,target_host,port)
+				continue
 		if(ack.split("~")[1]=="1" and ack.split("~")[3]=="1"):
 			print("Server Connection ACK received")
-			req_pac = Packet(1,0,0,0,0,str(request))
+			req_pac = Packet(1,0,0,0,0,str(request))  # SYN is 1 here..
 			self.send(req_pac,target_host,port)
 			print("File Request Sent")
 		return
@@ -73,9 +82,9 @@ class Connection:
 		packet_params = recvd_string.split('~')
 		pno = packet_params[4]
 		checksum = packet_params[7]
-		if(self.verifyChecksum(packet_params[8],packet_params[7])==False):
+		if(self.verifyChecksum(recvd_string,packet_params[7])==False):
 			print(f"Packet {pno} compromised")
-			return
+			return None
 		elif(packet_params[1]=="0" and packet_params[2]=="0" and packet_params[3]=="0"):  # and packet_params[4]!="4" Add packet number here to check for packet loss
 			print(f"Packet {pno} ok")
 			ack_pack = Packet(0,0,1,0,pno,"")
@@ -89,8 +98,25 @@ class Connection:
 	def close(self):
 		self.s.close()
 
-	def verifyChecksum(self,body,chk):
-		cc =  (((mmh3.hash(body))) % (1<<16))
+	def verifyChecksum(self,packet,chk):
+		packet_params = packet.split("~")
+		temp = ""
+		temp += packet_params[0]
+		temp += "~"
+		temp += packet_params[1]
+		temp += "~"
+		temp += packet_params[2]
+		temp += "~"
+		temp += packet_params[3]
+		temp += "~"
+		temp += packet_params[4]
+		temp += "~"
+		temp += packet_params[5]
+		temp += "~"
+		temp += packet_params[6]
+		temp += "~"
+		temp += packet_params[8]
+		cc =  (((mmh3.hash(temp))) % (1<<16))
 		if(int(cc)==int(chk)):
 			return True
 		else:
@@ -137,7 +163,8 @@ class Packet:
 		print(self.packet)
 
 	def computeChecksum(self):
-		return (((mmh3.hash(self.payload))) % (1<<16))
+		temp = self.header + self.payload
+		return (((mmh3.hash(temp))) % (1<<16))
 
 
 

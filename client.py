@@ -12,7 +12,6 @@ class Client:
     self_host = ""
     self_port = 0
     s = RUDP.Connection()
-    # Change packet list from list to dict
     packet_list = {}
     last_received_time = 0
     write_list = list()
@@ -24,19 +23,20 @@ class Client:
         self.request = str(file_request)
         self.s.bind(self.self_host,self.self_port)
         self.s.connect(self.target_host,self.target_port,self.request)
-        # thread_timer = threading.Thread(target=self.global_timer,args=())
-        # thread_timer.start()
+        self.last_received_time = time.time()
+        thread_timer = threading.Thread(target=self.global_timer,args=())
+        thread_timer.start()
         while(True):
             line = self.s.recv(target_host,target_port)
             if(line is not None):
                 self.last_received_time = time.time()
-            if(line.split("~")[2]=="1"):
-                print("Server closing connection")
-                break
-            pno = int(line.split("~")[4])
-            body = line.split("~")[8]
-            print(f"Body received in packet {pno}: {body}")
-            self.packet_list[pno] = body
+                if(line.split("~")[2]=="1"):
+                    print("Server closing connection")
+                    break
+                pno = int(line.split("~")[4])
+                body = line.split("~")[8]
+                print(f"Body received in packet {pno}: {body}")
+                self.packet_list[pno] = body
         self.s.close()
         # print(self.packet_list)
         od = OrderedDict(sorted(self.packet_list.items()))
@@ -55,8 +55,14 @@ class Client:
         while(True):
             if(time.time() - self.last_received_time) >= self.s.timeoutval:
                 print(f"Timeoutval is {self.s.timeoutval}")
+                print(f"Time.Time is {time.time()}")
+                print(f"Last Received Time is {self.last_received_time}")
                 print("Global Timer exceeded")
                 os._exit(0)
+
+    def check_contiguous(self):
+        while(True):
+            return
 
 
 if __name__ == '__main__':
