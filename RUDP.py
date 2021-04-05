@@ -17,7 +17,7 @@ class Connection:
 	s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 	timeoutval = 0
 
-	def __init__(self,buffer_size=0,window_size=3,packet_size=1024,timeoutval=10,max_retransmits = 5):
+	def __init__(self,buffer_size=0,window_size=3,packet_size=1024,timeoutval=30,max_retransmits = 5):
 		self.buffer_size = buffer_size
 		self.window_size = window_size
 		self.packet_size = packet_size
@@ -31,7 +31,7 @@ class Connection:
 		print("Client Connection Request Sent")
 		ack = ""
 		while(True):
-			time.sleep(1)
+			time.sleep(0.5)
 			ack = self.recv(target_host,port)
 			if ack is not None:
 				break
@@ -49,11 +49,18 @@ class Connection:
 		conn_req = self.recv(target_host,port)
 		if(conn_req.split("~")[1]=="1" and conn_req.split("~")[4]=="0"):
 			print("Client Connection request received")
-			ack_pac = Packet(1,0,1,0,0,"")
-			print("Server connection ACK sent")
-			self.send(ack_pac,target_host,port)
-			req_pac = self.recv(target_host,port)
-			print(f"Client File request received:")
+			req_pac = ""
+			while(True):
+				ack_pac = Packet(1,0,1,0,0,"")
+				self.send(ack_pac,target_host,port)
+				print("Server connection ACK sent")
+				time.sleep(0.5)
+				req_pac = self.recv(target_host,port)
+				if req_pac is not None:
+					print(f"Client File request received:")
+					break
+				else:
+					continue
 			print(f"File name requested by client is {req_pac.split('~')[8]}")
 			return req_pac.split("~")[8]
 		return 0
@@ -117,6 +124,8 @@ class Connection:
 		temp += "~"
 		temp += packet_params[8]
 		cc =  (((mmh3.hash(temp))) % (1<<16))
+		print(cc)
+		print(chk)
 		if(int(cc)==int(chk)):
 			return True
 		else:

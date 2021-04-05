@@ -35,7 +35,7 @@ class Client:
                     break
                 pno = int(line.split("~")[4])
                 body = line.split("~")[8]
-                print(f"Body received in packet {pno}: {body}")
+                # print(f"Body received in packet {pno}: {body}")
                 self.packet_list[pno] = body
         self.s.close()
         # print(self.packet_list)
@@ -44,10 +44,14 @@ class Client:
             for word in body:
                 self.write_list.append(word)
         # print(self.write_list)
-        with open("output.txt","w") as f:
+        output_file = "output."
+        temp = file_request.split(".")
+        output_file += temp[1]
+        with open(output_file,"w") as f:
             for letter in self.write_list:
                 f.write(letter)
 
+        print(f"Written to {output_file}")
         os._exit(0)
 
 
