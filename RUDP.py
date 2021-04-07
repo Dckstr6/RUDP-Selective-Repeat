@@ -9,21 +9,16 @@ import os
 
 class Connection:
 	buffer_size = 0
-	window_size = 0
 	max_retransmits = 0
-	send_base = 0
-	send_head = 0
 	packet_size = 0
 	s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 	timeoutval = 0
 
-	def __init__(self,buffer_size=0,window_size=3,packet_size=1024,timeoutval=30,max_retransmits = 5):
+	def __init__(self,buffer_size=0,packet_size=1024,timeoutval=30,max_retransmits = 5):
 		self.buffer_size = buffer_size
-		self.window_size = window_size
 		self.packet_size = packet_size
 		self.timeoutval = timeoutval
 		self.max_retransmits = max_retransmits
-		self.send_head = self.send_base + self.window_size - 1
 
 	def connect(self,target_host,port,request):
 		syn_pac = Packet(1,0,0,0,0,bytes("First Packet", 'utf-8'))
@@ -101,9 +96,6 @@ class Connection:
 			self.send(ack_pack,target_host,port)
 		return chunk
 
-
-	def settimeout(self):
-		self.s.settimeout(self.timeoutval)
 
 	def close(self):
 		self.s.close()

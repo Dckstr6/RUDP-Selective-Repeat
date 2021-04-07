@@ -14,21 +14,33 @@ class Server:
     total_packets = 0
     number_of_acked_packets = 0
     last_received_time = 0
-    packet_size = 1000
-    body_size = 800
+    packet_size = 300
+    body_size = 200
     last_sent_index = 0
     retransmission_counter = 4
-    s = RUDP.Connection()
     ack_array = list()
     total_data = ""
     all_threads = list()
     sleep_time = 3
+    window_size = 0
+    send_head = 0
+    send_base = 0
+    serv_timeout = 0
 
-    def __init__(self,self_host,self_port,target_host,target_port):
+    def __init__(self,self_host,self_port,target_host,target_port,retransmission_counter,window_size,sleep_time,serv_timeout=30,packet_size=100,body_size=60):
         self.target_host = str(target_host)
         self.target_port = target_port
         self.self_host = str(self_host)
         self.self_port = self_port
+        self.retransmission_counter = retransmission_counter
+        self.window_size = window_size
+        self.send_head = self.send_base + self.window_size - 1
+        self.sleep_time = sleep_time
+        self.serv_timeout = serv_timeout
+        self.packet_size = packet_size
+        self.body_size = body_size
+        self.s = RUDP.Connection(timeoutval=self.serv_timeout)
+
         self.s.bind(self.self_host,self.self_port)
         file_name = self.s.listen(self.target_host,self.target_port)
         count = 0
@@ -62,7 +74,7 @@ class Server:
         retries = 0
         flag = 0
         while(flag==0):
-            if(packet_no >= self.s.send_base and packet_no <= self.s.send_head):
+            if(packet_no >= self.send_base and packet_no <= self.send_head):
                 print(f"Able to send packet {packet_no}")
                 flag = 1
                 while(True):
@@ -101,14 +113,14 @@ class Server:
                     self.number_of_acked_packets += 1
                 self.last_received_time = time.time()
                 self.mutex.release()
-                if((self.ack_array[self.s.send_base]==1)):
+                if((self.ack_array[self.send_base]==1)):
                     self.mutex.acquire()
                     try:
-                        if((self.s.send_base < self.total_packets - self.s.window_size)):
-                            self.s.send_base += 1
-                            self.s.send_head += 1
-                            print(f"Send base is now {self.s.send_base}")
-                            print(f"Send head is now {self.s.send_head}")
+                        if((self.send_base < self.total_packets - self.window_size)):
+                            self.send_base += 1
+                            self.send_head += 1
+                            print(f"Send base is now {self.send_base}")
+                            print(f"Send head is now {self.send_head}")
                     finally:
                         self.mutex.release()
         print("All ACKS Received. Initiating termination")
@@ -130,7 +142,7 @@ class Server:
         return
 
 if __name__ == '__main__':
-    s1 = Server("127.0.0.1",65432,"127.0.0.1",65431)
+    s1 = Server("127.0.0.1",65432,"127.0.0.1",65431,5,3,3)
 
 
 

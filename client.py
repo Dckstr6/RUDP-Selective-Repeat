@@ -11,19 +11,25 @@ class Client:
     target_port = 0
     self_host = ""
     self_port = 0
-    s = RUDP.Connection()
     packet_list = {}
     last_received_time = 0
+    start_time = time.time()
     write_list = ""
-    def __init__(self,self_host,self_port,target_host,target_port,file_request):
+    cl_timeout = 0
+    def __init__(self,self_host,self_port,target_host,target_port,file_request,cl_timeout=30):
         self.target_host = str(target_host)
         self.target_port = target_port
         self.self_host = str(self_host)
         self.self_port = self_port
         self.request = str(file_request)
+        self.cl_timeout = cl_timeout
+        self.s = RUDP.Connection(timeoutval=cl_timeout)
+
         self.s.bind(self.self_host,self.self_port)
         self.s.connect(self.target_host,self.target_port,self.request)
         self.last_received_time = time.time()
+        elapsed_thread = threading.Thread(target=self.time_elapsed,args=())
+        elapsed_thread.start()
         thread_timer = threading.Thread(target=self.global_timer,args=())
         thread_timer.start()
         while(True):
@@ -71,6 +77,11 @@ class Client:
     def check_contiguous(self):
         while(True):
             return
+    
+    def time_elapsed(self):
+        current_time = time.time()
+        elap = current_time - self.start_time
+        return elap
 
 
 if __name__ == '__main__':
