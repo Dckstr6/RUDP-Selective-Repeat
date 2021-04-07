@@ -26,7 +26,7 @@ class Connection:
 		self.send_head = self.send_base + self.window_size - 1
 
 	def connect(self,target_host,port,request):
-		syn_pac = Packet(1,0,0,0,0,"")
+		syn_pac = Packet(1,0,0,0,0,bytes("First Packet", 'utf-8'))
 		self.send(syn_pac,target_host,port)
 		print("Client Connection Request Sent")
 		ack = ""
@@ -40,7 +40,7 @@ class Connection:
 				continue
 		if(ack.split("~")[1]=="1" and ack.split("~")[3]=="1"):
 			print("Server Connection ACK received")
-			req_pac = Packet(1,0,0,0,0,str(request))  # SYN is 1 here..
+			req_pac = Packet(1,0,0,0,0,bytes(request, 'utf-8'))  # SYN is 1 here..
 			self.send(req_pac,target_host,port)
 			print("File Request Sent")
 		return
@@ -51,7 +51,7 @@ class Connection:
 			print("Client Connection request received")
 			req_pac = ""
 			while(True):
-				ack_pac = Packet(1,0,1,0,0,"")
+				ack_pac = Packet(1,0,1,0,0,bytes("ACK Packet", 'utf-8'))
 				self.send(ack_pac,target_host,port)
 				print("Server connection ACK sent")
 				time.sleep(0.5)
@@ -68,10 +68,10 @@ class Connection:
 	def send(self,packet,target_host,port):
 		packet_params = packet.packet.split('~')
 		pno = packet_params[4]
-		packet_bytes = packet.packet.encode("ascii")
-		base64_bytes = base64.b64encode(packet_bytes)
-		base64_string = base64_bytes.decode("ascii")
-		self.s.sendto(base64_bytes,(str(target_host),int(port)))
+		# packet_bytes = packet.packet.encode("ascii")
+		# base64_bytes = base64.b64encode(packet_bytes)
+		# base64_string = base64_bytes.decode("ascii")
+		self.s.sendto(bytes(packet.packet, encoding="utf-8"),(str(target_host),int(port)))
 		if(packet_params[3]=="0" and packet_params[1]!="1"):
 			print(f"Sent packet {pno}")
 		elif(packet_params[3]=="1" and packet_params[1]!="1"):
@@ -82,21 +82,24 @@ class Connection:
 
 	def recv(self,target_host,port):
 		chunk,addr = self.s.recvfrom(self.packet_size)
-		base64_string = str(chunk)
-		base64_bytes = chunk.decode("ascii")
-		ascii_string_bytes = base64.b64decode(chunk)
-		recvd_string = ascii_string_bytes.decode("ascii")
-		packet_params = recvd_string.split('~')
+		chunk = chunk.decode(encoding='utf-8')
+		# base64_string = str(chunk)
+		# base64_bytes = chunk.decode("ascii")
+		# ascii_string_bytes = base64.b64decode(chunk)
+		# recvd_string = ascii_string_bytes.decode("ascii")
+		# packet_params = recvd_string.split('~')
+		chunk = str(chunk)
+		packet_params = chunk.split("~")
 		pno = packet_params[4]
 		checksum = packet_params[7]
-		if(self.verifyChecksum(recvd_string,packet_params[7])==False):
+		if(self.verifyChecksum(chunk,packet_params[7])==False):
 			print(f"Packet {pno} compromised")
 			return None
 		elif(packet_params[1]=="0" and packet_params[2]=="0" and packet_params[3]=="0"):  # and packet_params[4]!="4" Add packet number here to check for packet loss
 			print(f"Packet {pno} ok")
-			ack_pack = Packet(0,0,1,0,pno,"")
+			ack_pack = Packet(0,0,1,0,pno,bytes("ACK Packet", 'utf-8'))
 			self.send(ack_pack,target_host,port)
-		return recvd_string
+		return chunk
 
 
 	def settimeout(self):
@@ -122,7 +125,7 @@ class Connection:
 		temp += "~"
 		temp += packet_params[6]
 		temp += "~"
-		temp += packet_params[8]
+		temp += (packet_params[8])
 		cc =  (((mmh3.hash(temp))) % (1<<16))
 		print(cc)
 		print(chk)
@@ -145,6 +148,7 @@ class Packet:
 	checksum = ""
 
 	def __init__(self,SYN,FIN,ACK,PNO,ANO,payload):
+
 		self.SYN = SYN
 		self.FIN = FIN
 		self.ACK = ACK
@@ -166,13 +170,18 @@ class Packet:
 		self.header += str(self.checksum)
 		self.header += "~"
 		self.packet += self.header
-		self.packet += self.payload
+		#temp = self.payload.encode('ascii')
+		#temp = self.payload.decode('ascii')
+		self.packet += str(self.payload.decode(encoding='utf-8'))
+		# self.packet += str(temp)
+		# self.packet += self.payload
+		# self.packet = bytes(self.packet, encoding="utf-8")
 
 	def printPacket(self):
 		print(self.packet)
 
 	def computeChecksum(self):
-		temp = self.header + self.payload
+		temp = self.header + str(self.payload.decode('utf-8'))
 		return (((mmh3.hash(temp))) % (1<<16))
 
 

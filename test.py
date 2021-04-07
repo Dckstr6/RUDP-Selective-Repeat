@@ -1,6 +1,6 @@
 import base64
 
-contents = list()
+contents = ""
 contents2 = list()
 with open("sample.txt","r") as f:
     contents = f.read()

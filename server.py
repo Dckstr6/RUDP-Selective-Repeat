@@ -4,6 +4,7 @@ import math
 import time
 import threading
 import os
+import base64
 class Server:
     mutex = threading.Lock()
     target_host = ""
@@ -13,13 +14,13 @@ class Server:
     total_packets = 0
     number_of_acked_packets = 0
     last_received_time = 0
-    packet_size = 30
-    body_size = 10
+    packet_size = 1000
+    body_size = 800
     last_sent_index = 0
     retransmission_counter = 4
     s = RUDP.Connection()
     ack_array = list()
-    total_data = list()
+    total_data = ""
     all_threads = list()
     sleep_time = 3
 
@@ -31,8 +32,9 @@ class Server:
         self.s.bind(self.self_host,self.self_port)
         file_name = self.s.listen(self.target_host,self.target_port)
         count = 0
-        with open(file_name,"r") as file:
-            self.total_data = [ch for ch in file.read()]
+        with open(file_name,"rb") as file:
+            self.total_data = file.read()
+            self.total_data = base64.encodebytes(self.total_data)
         self.total_packets = math.ceil(len(self.total_data)/(self.body_size))
         print(f"Total packets are {self.total_packets}")
         for i in range(0,self.total_packets):
@@ -65,8 +67,9 @@ class Server:
                 flag = 1
                 while(True):
                     packet_body = ""
-                    for i in range((self.body_size*packet_no),min(self.body_size*(packet_no+1),len(self.total_data))):
-                        packet_body += str(self.total_data[i])
+                    packet_body = self.total_data[(self.body_size*packet_no):min(self.body_size*(packet_no+1),len(self.total_data))]
+                    # for i in range((self.body_size*packet_no),min(self.body_size*(packet_no+1),len(self.total_data))):
+                    #     packet_body += str(self.total_data[i])
                     sending_packet = RUDP.Packet(0,0,0,packet_no,0,packet_body)
                     self.s.send(sending_packet,self.target_host,self.target_port)
                     time.sleep(self.sleep_time)
@@ -121,7 +124,7 @@ class Server:
                 os._exit(0)
 
     def end_connection(self):
-        fin_packet = RUDP.Packet(0,1,0,0,0,"")
+        fin_packet = RUDP.Packet(0,1,0,0,0,bytes("End Connection", 'utf-8'))
         self.s.send(fin_packet,self.target_host,self.target_port)
         print("Server ending connection")
         return

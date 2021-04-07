@@ -4,7 +4,7 @@ import os
 import threading
 import time
 from collections import OrderedDict
-
+import base64
 class Client:
     request = ""
     target_host = ""
@@ -14,7 +14,7 @@ class Client:
     s = RUDP.Connection()
     packet_list = {}
     last_received_time = 0
-    write_list = list()
+    write_list = ""
     def __init__(self,self_host,self_port,target_host,target_port,file_request):
         self.target_host = str(target_host)
         self.target_port = target_port
@@ -34,7 +34,9 @@ class Client:
                     print("Server closing connection")
                     break
                 pno = int(line.split("~")[4])
-                body = line.split("~")[8]
+                body = ""
+                # body += line.split("~")[8]
+                body += line.split("~")[8]
                 # print(f"Body received in packet {pno}: {body}")
                 self.packet_list[pno] = body
         self.s.close()
@@ -42,11 +44,13 @@ class Client:
         od = OrderedDict(sorted(self.packet_list.items()))
         for no,body in od.items():
             for word in body:
-                self.write_list.append(word)
+                self.write_list += word
         # print(self.write_list)
         output_file = "output."
         temp = file_request.split(".")
         output_file += temp[1]
+        final_write_list = base64.decodebytes(bytes(self.write_list,encoding='utf-8'))
+        # final_write_list = final_write_list.decode('ascii')
         with open(output_file,"w") as f:
             for letter in self.write_list:
                 f.write(letter)
