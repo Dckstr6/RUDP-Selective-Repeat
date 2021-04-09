@@ -14,7 +14,7 @@ class Client:
     packet_list = {}
     last_received_time = 0
     start_time = time.time()
-    write_list = ""
+    write_list = b""
     cl_timeout = 0
     def __init__(self,self_host,self_port,target_host,target_port,file_request,cl_timeout=30):
         self.target_host = str(target_host)
@@ -36,30 +36,26 @@ class Client:
             line = self.s.recv(target_host,target_port)
             if(line is not None):
                 self.last_received_time = time.time()
-                if(line.split("~")[2]=="1"):
+                if(line.packet.split("~")[2]=="1"):
                     print("Server closing connection")
                     break
-                pno = int(line.split("~")[4])
-                body = ""
-                # body += line.split("~")[8]
-                body += line.split("~")[8]
-                # print(f"Body received in packet {pno}: {body}")
-                self.packet_list[pno] = body
+                pno = int(line.packet.split("~")[4])
+                temp = b""
+                temp += line.payload
+                self.packet_list[pno] = temp
         self.s.close()
         # print(self.packet_list)
         od = OrderedDict(sorted(self.packet_list.items()))
         for no,body in od.items():
-            for word in body:
-                self.write_list += word
+            self.write_list += body
         # print(self.write_list)
+        # print((base64.decodebytes(self.write_list)).decode())
         output_file = "output."
         temp = file_request.split(".")
         output_file += temp[1]
-        final_write_list = base64.decodebytes(bytes(self.write_list,encoding='utf-8'))
         # final_write_list = final_write_list.decode('ascii')
         with open(output_file,"w") as f:
-            for letter in self.write_list:
-                f.write(letter)
+            f.write((base64.decodebytes(self.write_list)).decode())
 
         print(f"Written to {output_file}")
         os._exit(0)
@@ -85,5 +81,5 @@ class Client:
 
 
 if __name__ == '__main__':
-    c1 = Client("127.0.0.1",65431,"127.0.0.1",65432,"sample.txt")
+    c1 = Client("127.0.0.1",65431,"127.0.0.1",65432,"sample.pdf")
 

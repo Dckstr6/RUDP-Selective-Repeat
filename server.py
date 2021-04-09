@@ -27,7 +27,7 @@ class Server:
     send_base = 0
     serv_timeout = 0
 
-    def __init__(self,self_host,self_port,target_host,target_port,retransmission_counter,window_size,sleep_time,serv_timeout=30,packet_size=100,body_size=60):
+    def __init__(self,self_host,self_port,target_host,target_port,retransmission_counter,window_size,sleep_time,serv_timeout=30,packet_size=1500,body_size=1000):
         self.target_host = str(target_host)
         self.target_port = target_port
         self.self_host = str(self_host)
@@ -104,8 +104,8 @@ class Server:
     def listen_for_ack(self):
         while(self.number_of_acked_packets < self.total_packets):
             response = self.s.recv(self.target_host,self.target_port)
-            if(response.split("~")[3]=="1"):
-                ack_no = int(response.split("~")[5])
+            if(response.packet.split("~")[3]=="1"):
+                ack_no = int(response.packet.split("~")[5])
                 print(f"Received ACK for packet {ack_no}")
                 self.mutex.acquire()
                 if(self.ack_array[ack_no]==0):

@@ -33,7 +33,7 @@ class Connection:
 			else:
 				self.send(syn_pac,target_host,port)
 				continue
-		if(ack.split("~")[1]=="1" and ack.split("~")[3]=="1"):
+		if(ack.packet.split("~")[1]=="1" and ack.packet.split("~")[3]=="1"):
 			print("Server Connection ACK received")
 			req_pac = Packet(1,0,0,0,0,bytes(request, 'utf-8'))  # SYN is 1 here..
 			self.send(req_pac,target_host,port)
@@ -42,7 +42,7 @@ class Connection:
 
 	def listen(self,target_host,port):
 		conn_req = self.recv(target_host,port)
-		if(conn_req.split("~")[1]=="1" and conn_req.split("~")[4]=="0"):
+		if(conn_req.packet.split("~")[1]=="1" and conn_req.packet.split("~")[4]=="0"):
 			print("Client Connection request received")
 			req_pac = ""
 			while(True):
@@ -52,12 +52,12 @@ class Connection:
 				time.sleep(0.5)
 				req_pac = self.recv(target_host,port)
 				if req_pac is not None:
-					print(f"Client File request received:")
+					print(f"Client File request received")
 					break
 				else:
 					continue
-			print(f"File name requested by client is {req_pac.split('~')[8]}")
-			return req_pac.split("~")[8]
+			print(f"File name requested by client is {req_pac.packet.split('~')[8]}")
+			return req_pac.packet.split("~")[8]
 		return 0
 
 	def send(self,packet,target_host,port):
@@ -94,7 +94,8 @@ class Connection:
 			print(f"Packet {pno} ok")
 			ack_pack = Packet(0,0,1,0,pno,bytes("ACK Packet", 'utf-8'))
 			self.send(ack_pack,target_host,port)
-		return chunk
+		recvd_packet = Packet(packet_params[1],packet_params[2],packet_params[3],packet_params[4],packet_params[5],bytes(packet_params[8],'utf-8'))
+		return recvd_packet
 
 
 	def close(self):
@@ -128,7 +129,7 @@ class Connection:
 
 
 class Packet:
-	payload = ""
+	payload = b""
 	header = "1~"
 	packet = ""
 	SYN = 0
@@ -155,7 +156,8 @@ class Packet:
 		self.header += str(ANO)
 		self.header += "~"
 		self.payload = payload
-		self.body_length = len(payload)
+		temp_str = str(self.payload.decode(encoding='utf-8'))
+		self.body_length = len(temp_str)
 		self.header += str(self.body_length)
 		self.header += "~"
 		self.checksum = self.computeChecksum()
@@ -164,10 +166,8 @@ class Packet:
 		self.packet += self.header
 		#temp = self.payload.encode('ascii')
 		#temp = self.payload.decode('ascii')
-		self.packet += str(self.payload.decode(encoding='utf-8'))
-		# self.packet += str(temp)
-		# self.packet += self.payload
-		# self.packet = bytes(self.packet, encoding="utf-8")
+		self.packet += temp_str
+
 
 	def printPacket(self):
 		print(self.packet)
@@ -179,3 +179,6 @@ class Packet:
 
 
 #comcast --device lo0 --stop
+
+
+
