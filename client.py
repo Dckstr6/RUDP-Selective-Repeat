@@ -5,6 +5,8 @@ import threading
 import time
 from collections import OrderedDict
 import base64
+import timeit
+
 class Client:
     request = ""
     target_host = ""
@@ -19,6 +21,7 @@ class Client:
     write_list = b""
     cl_timeout = 0
     def __init__(self,self_host,self_port,target_host,target_port,file_request,cl_timeout=30,packet_size=10024,body_size=8000):
+        start = timeit.default_timer()
         self.target_host = str(target_host)
         self.target_port = target_port
         self.self_host = str(self_host)
@@ -62,6 +65,12 @@ class Client:
             f.write(final)
 
         print(f"Written to {output_file}")
+        stop = timeit.default_timer()
+        f = open("times.txt", "a")
+        k = stop - start
+        s = str(k)
+        f.write(s + '\n')
+        f.close()
         os._exit(0)
 
 
