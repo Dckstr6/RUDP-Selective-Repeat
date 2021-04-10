@@ -7,19 +7,47 @@ from collections import OrderedDict
 import base64
 import timeit
 
+## Client Class: Makes a file request to the server
+# 
+#  Makes a request for the filename, passed as an argument from the GUI, to the server
+#  The server should be up and running before running the client
+#
+
 class Client:
+    ## requested file name
     request = ""
+    ## server ip address
     target_host = ""
+    ## server port
     target_port = 0
+    ## client ip address
     self_host = ""
+    ## client port
     self_port = 0
+    ## size of packet received
     packet_size = 0
+    ## size of body of the packet received
     body_size =0 
+    ## list of all packets received
     packet_list = {}
+    ## last received time
     last_received_time = 0
+    ## client start time
     start_time = time.time()
+    ## list of all bytes
     write_list = b""
+    ## has the object timed out
     cl_timeout = 0
+    ## Class constructor: Sends the connection request and recieves the file requested
+    #
+    #  @param self_host object ip
+    #  @param self_port obejct port
+    #  @param target_host target ip
+    #  @param target_port target port
+    #  @param file_request file name
+    #  @param cl_timeout timeout value
+    #  @param packet_size packet size
+    #  @param body_size body size
     def __init__(self,self_host,self_port,target_host,target_port,file_request,cl_timeout=30,packet_size=10024,body_size=8000):
         start = timeit.default_timer()
         self.target_host = str(target_host)
@@ -73,7 +101,8 @@ class Client:
         f.close()
         os._exit(0)
 
-
+    ## Global Timer: Used to terminate redundant connections
+    #  @param self Obejct pointer 
     def global_timer(self):
         while(True):
             if(time.time() - self.last_received_time) >= self.s.timeoutval:
@@ -82,11 +111,14 @@ class Client:
                 print(f"Last Received Time is {self.last_received_time}")
                 print("Global Timer exceeded")
                 os._exit(0)
-
+    ## to check if object exists?
+    #  @param self Obejct pointer
+    # 
     def check_contiguous(self):
         while(True):
             return
-    
+    ## Total time runnning
+    #  @param self Obejct pointer
     def time_elapsed(self):
         current_time = time.time()
         elap = current_time - self.start_time

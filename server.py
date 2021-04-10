@@ -5,27 +5,55 @@ import time
 import threading
 import os
 import base64
+
+##  Server class
+#
+# Listens for and then accepts the clients request for a file and sends the file using the RUDP protocol as designed in the project 
 class Server:
     mutex = threading.Lock()
+    ## target host
     target_host = ""
+    ## target's port
     target_port = 0
+    ## self host
     self_host = ""
+    ## self port
     self_port = 0
+    ## total packets
     total_packets = 0
+    ## Number Of packets ACKed 
     number_of_acked_packets = 0
+    ## Last recieved time
     last_received_time = 0
+    ## Size of each packet
     packet_size = 300
+    ## Size of the body
     body_size = 200
+    ## Index of the last packet sent
     last_sent_index = 0
+    ## the counter
     retransmission_counter = 4
+    ## Array whose indices are the packet packet numbers and the value stored is whether they are ACKed or not
     ack_array = list()
+    ## All the thread --
     all_threads = list()
+    ## sleep time set for the threads
     sleep_time = 3
+    ## Sliding window size
     window_size = 0
+    ## Pointer to the packet to be sent
     send_head = 0
+    ## Pointer to the base packet of the sliding window on the sender side
     send_base = 0
+    ## server timeout
     serv_timeout = 0
 
+
+    ## The constructor for the Server class
+    #
+    # This constructor fills in the values for the class variables and starts with the process of sending the file to the client.
+    # It reads the filename from the request and starts reading the file in the folder and encodes it using base64. It then starts sending the encoded file in packets of defined size. It creates threads for sending each of the packets and then wait for ACKs and acts accordingly based on the response. 
+    # After all the packets have been sent and ACKed the process of terminating the connection starts and then the connection between server and client is closed.
     def __init__(self,self_host,self_port,target_host,target_port,retransmission_counter,window_size,sleep_time,serv_timeout=30,packet_size=10024,body_size=8000):
         self.target_host = str(target_host)
         self.target_port = target_port
@@ -69,10 +97,17 @@ class Server:
         # print(self.total_data)
         os._exit(0)
 
-
+    ## send_this_packet Method
+    # @param self is the object pointer
+    # @param packet_no is the packet number to be sent among all the packets
+    #
+    # This method when invoked creates the packet, send it and waits for an ACK. Based on the response from the client, the method acts accordingly (as specified in the design documentation) 
     def send_this_packet(self,packet_no):
+        ## variable to store the number of retransmissions
         retries = 0
+        ## the variable that stores information whether the packet has been sent succesfully or not
         flag = 0
+
         while(flag==0):
             if(packet_no >= self.send_base and packet_no <= self.send_head):
                 print(f"Able to send packet {packet_no}")
@@ -99,7 +134,11 @@ class Server:
             else:
                 continue
         return
-
+    
+    ## listen_for_ack Method
+    # @param self is the object pointer
+    #
+    # This method is invoked to listen for ACKs from the client after sending packets
     def listen_for_ack(self):
         while(self.number_of_acked_packets < self.total_packets):
             response = self.s.recv(self.target_host,self.target_port)
@@ -125,6 +164,10 @@ class Server:
         print("All ACKS Received. Initiating termination")
         return
 
+    ## global_timer Method
+    # @param self is the object pointer
+    # 
+    # A global timer that is run to check for timeouts. 
     def global_timer(self):
         while(True):
             if(time.time() - self.last_received_time) >= self.s.timeoutval:
@@ -134,6 +177,10 @@ class Server:
                 print("Global Timer exceeded")
                 os._exit(0)
 
+    ## end_connection Method
+    # @param self is the object pointer
+    # 
+    # This method when invoked initiates the closing of the connection between the server and the client
     def end_connection(self):
         fin_packet = RUDP.Packet(0,1,0,0,0,bytes("End Connection", 'utf-8'))
         self.s.send(fin_packet,self.target_host,self.target_port)
