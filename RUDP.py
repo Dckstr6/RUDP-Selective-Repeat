@@ -8,14 +8,13 @@ import time
 import os
 
 class Connection:
-	buffer_size = 0
 	max_retransmits = 0
 	packet_size = 0
 	s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 	timeoutval = 0
 
-	def __init__(self,buffer_size=0,packet_size=1024,timeoutval=30,max_retransmits = 5):
-		self.buffer_size = buffer_size
+	# Problem is due to this packet size in client.
+	def __init__(self,packet_size=10024,timeoutval=30,max_retransmits = 5):
 		self.packet_size = packet_size
 		self.timeoutval = timeoutval
 		self.max_retransmits = max_retransmits
@@ -118,7 +117,7 @@ class Connection:
 		temp += "~"
 		temp += packet_params[6]
 		temp += "~"
-		temp += (packet_params[8])
+		temp += packet_params[8]
 		cc =  (((mmh3.hash(temp))) % (1<<16))
 		print(cc)
 		print(chk)
@@ -164,8 +163,6 @@ class Packet:
 		self.header += str(self.checksum)
 		self.header += "~"
 		self.packet += self.header
-		#temp = self.payload.encode('ascii')
-		#temp = self.payload.decode('ascii')
 		self.packet += temp_str
 
 
@@ -173,7 +170,7 @@ class Packet:
 		print(self.packet)
 
 	def computeChecksum(self):
-		temp = self.header + str(self.payload.decode('utf-8'))
+		temp = self.header + str(self.payload.decode(encoding='utf-8'))
 		return (((mmh3.hash(temp))) % (1<<16))
 
 
