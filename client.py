@@ -14,6 +14,7 @@ import timeit
 #
 
 class Client:
+    mutex = threading.Lock()
     ## requested file name
     request = ""
     ## server ip address
@@ -38,6 +39,9 @@ class Client:
     write_list = b""
     ## has the object timed out
     cl_timeout = 0
+    ## Flag to check if data receiving has started
+    is_data_received = 0
+    is_ack_received = 0
     ## Class constructor: Sends the connection request and recieves the file requested
     #
     #  @param self_host object ip
@@ -59,9 +63,29 @@ class Client:
         self.packet_size = packet_size
         self.body_size = body_size
         self.s = RUDP.Connection(timeoutval=cl_timeout,packet_size=self.packet_size)
-
         self.s.bind(self.self_host,self.self_port)
-        self.s.connect(self.target_host,self.target_port,self.request)
+
+        print("Initiating Handshake")
+
+
+        first_t = threading.Thread(target=self.send_first_packet,args=())
+        first_t.start()
+
+        while(True):
+            ack_pack = self.s.recv(self.target_host,self.target_port)
+            if(ack_pack is not None and ack_pack.packet.split("~")[1]=="True" and ack_pack.packet.split("~")[3]=="True" and ack_pack.packet.split("~")[8]=="ACK Packet"):
+                self.mutex.acquire()
+                if(self.is_ack_received==0):
+                    self.is_ack_received = 1
+                self.mutex.release()
+                break
+            else:
+                continue
+
+        third_t = threading.Thread(target=self.send_third_packet,args=())
+        third_t.start()
+
+
         self.last_received_time = time.time()
         elapsed_thread = threading.Thread(target=self.time_elapsed,args=())
         elapsed_thread.start()
@@ -70,10 +94,19 @@ class Client:
         while(True):
             line = self.s.recv(target_host,target_port)
             if(line is not None):
+                self.mutex.acquire()
+                if(self.is_data_received==0):
+                    self.is_data_received = 1
+                self.mutex.release()
+                packet_params = line.packet.split("~")
                 self.last_received_time = time.time()
-                if(line.packet.split("~")[2]=="1"):
+                if(line.packet.split("~")[2]=="True"):
                     print("Server closing connection")
                     break
+                elif(packet_params[1]=="False" and packet_params[2]=="False" and packet_params[3]=="False"):  # and packet_params[4]!="4" Add packet number here to check for packet los
+                    print(f"Packet {packet_params[4]} ok")
+                    ack_pack = RUDP.Packet(0,0,1,0,int(packet_params[4]),bytes("ACK Packet", 'utf-8'))
+                    self.s.send(ack_pack,self.target_host,self.target_port)
                 pno = int(line.packet.split("~")[4])
                 temp = line.payload
                 self.packet_list[pno] = temp
@@ -101,6 +134,33 @@ class Client:
         f.close()
         os._exit(0)
 
+    def send_first_packet(self):
+        while(True):
+            syn_pac = RUDP.Packet(1,0,0,0,0,bytes("First Packet", 'utf-8'))
+            self.s.send(syn_pac,self.target_host,self.target_port)
+            print("Client Connection Request Sent")
+            time.sleep(2)
+            if(self.is_ack_received==1):
+                print("Server ACK Received")
+                break
+            else:
+                print("Server ACK not received. Resending connection request")
+                continue
+        return
+
+    def send_third_packet(self):
+        while(True):
+            req_pac = RUDP.Packet(0,0,0,0,0,bytes(self.request, 'utf-8'))
+            self.s.send(req_pac,self.target_host,self.target_port)
+            print("Client Request sent")
+            time.sleep(2)
+            if(self.is_data_received==1):
+                break
+            else:
+                print("Resending file request to server")
+                continue
+        return
+
     ## Global Timer: Used to terminate redundant connections
     #  @param self Obejct pointer 
     def global_timer(self):
@@ -111,12 +171,8 @@ class Client:
                 print(f"Last Received Time is {self.last_received_time}")
                 print("Global Timer exceeded")
                 os._exit(0)
-    ## to check if object exists?
-    #  @param self Obejct pointer
-    # 
-    def check_contiguous(self):
-        while(True):
-            return
+
+
     ## Total time runnning
     #  @param self Obejct pointer
     def time_elapsed(self):
@@ -126,5 +182,5 @@ class Client:
 
 
 if __name__ == '__main__':
-    c1 = Client("127.0.0.1",65431,"127.0.0.1",65432,"sample.png")
+    c1 = Client("127.0.0.1",65431,"127.0.0.1",65432,"sample.png",packet_size=10000,body_size=8000)
 

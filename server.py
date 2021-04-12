@@ -47,7 +47,8 @@ class Server:
     send_base = 0
     ## server timeout
     serv_timeout = 0
-
+    ## Filename
+    filename = 0
 
     ## The constructor for the Server class
     #
@@ -67,13 +68,29 @@ class Server:
         self.packet_size = packet_size
         self.body_size = body_size
         self.s = RUDP.Connection(timeoutval=self.serv_timeout,packet_size=self.packet_size)
-
         self.s.bind(self.self_host,self.self_port)
-        file_name = self.s.listen(self.target_host,self.target_port)
+
+
+        while(True):
+            conn_pac = self.s.recv(self.target_host,self.target_port)
+            if(conn_pac is not None and conn_pac.packet.split("~")[1]=="True" and conn_pac.packet.split("~")[8]=="First Packet"):
+                print("Client Connection Request Received")
+                ack_pac = RUDP.Packet(1,0,1,0,0,bytes("ACK Packet", 'utf-8'))
+                self.s.send(ack_pac,self.target_host,self.target_port)
+                continue
+            elif(conn_pac is not None and conn_pac.packet.split("~")[1]=="False"):
+                self.filename = conn_pac.packet.split("~")[8]
+                print(f"Filename requested is {self.filename}")
+                break
         count = 0
-        with open(file_name,"rb") as file:
-            string_data = file.read()
-            self.total_data = base64.encodebytes(string_data)
+        try:
+            with open(self.filename,"rb") as file:
+                string_data = file.read()
+                self.total_data = base64.encodebytes(string_data)
+        except IOError:
+            print(f"Error File {self.filename} not found")
+            self.end_connection()
+            os._exit(0)
         self.total_packets = math.ceil(len(self.total_data)/(self.body_size))
         print(f"Total packets are {self.total_packets}")
         for i in range(0,self.total_packets):
@@ -114,8 +131,6 @@ class Server:
                 flag = 1
                 while(True):
                     packet_body = self.total_data[(self.body_size*packet_no):min(self.body_size*(packet_no+1),len(self.total_data))]
-                    # for i in range((self.body_size*packet_no),min(self.body_size*(packet_no+1),len(self.total_data))):
-                    #     packet_body += str(self.total_data[i])
                     sending_packet = RUDP.Packet(0,0,0,packet_no,0,packet_body)
                     self.s.send(sending_packet,self.target_host,self.target_port)
                     time.sleep(self.sleep_time)
@@ -142,7 +157,7 @@ class Server:
     def listen_for_ack(self):
         while(self.number_of_acked_packets < self.total_packets):
             response = self.s.recv(self.target_host,self.target_port)
-            if(response.packet.split("~")[3]=="1"):
+            if(response.packet.split("~")[3]=="True"):
                 ack_no = int(response.packet.split("~")[5])
                 print(f"Received ACK for packet {ack_no}")
                 self.mutex.acquire()
@@ -188,7 +203,7 @@ class Server:
         return
 
 if __name__ == '__main__':
-    s1 = Server("127.0.0.1",65432,"127.0.0.1",65431,5,3,3)
+    s1 = Server("127.0.0.1",65432,"127.0.0.1",65431,5,3,3,packet_size=10000,body_size=8000)
 
 
 
