@@ -26,14 +26,16 @@ class Connection:
 	## timeout value
 	timeoutval = 0
 
-	# Problem is due to this packet size in client.
+	window_size = 0
+
+	buffer_size = 0
 
 	## Class constructor
 	# 
 	#  @param self The object pointer
 	#  @param packet_size packet size
 	#  @param max_retransmits max no of retransmits
-	def __init__(self,packet_size=10024,timeoutval=30,max_retransmits = 5):
+	def __init__(self,packet_size=10024,timeoutval=30,max_retransmits = 5,window_size = 3,buffer_size=6):
 		self.packet_size = packet_size
 		self.timeoutval = timeoutval
 		self.max_retransmits = max_retransmits
@@ -130,8 +132,8 @@ class Packet:
 	## payload of the packet
 	payload = b""
 	## header of the packet
-	header = "1~"
-	## packet body
+	header = "True~"
+	## packet string
 	packet = ""
 	## SYN bit
 	SYN = 0

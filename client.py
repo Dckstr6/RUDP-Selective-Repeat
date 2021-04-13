@@ -42,6 +42,9 @@ class Client:
     ## Flag to check if data receiving has started
     is_data_received = 0
     is_ack_received = 0
+
+    window_size = 0
+    buffer_size = 0
     ## Class constructor: Sends the connection request and recieves the file requested
     #
     #  @param self_host object ip
@@ -52,7 +55,7 @@ class Client:
     #  @param cl_timeout timeout value
     #  @param packet_size packet size
     #  @param body_size body size
-    def __init__(self,self_host,self_port,target_host,target_port,file_request,cl_timeout=30,packet_size=10024,body_size=8000):
+    def __init__(self,self_host,self_port,target_host,target_port,file_request,cl_timeout=30,packet_size=10024,body_size=8000,window_size=3,buffer_size=6):
         start = timeit.default_timer()
         self.target_host = str(target_host)
         self.target_port = target_port
@@ -62,7 +65,9 @@ class Client:
         self.cl_timeout = cl_timeout
         self.packet_size = packet_size
         self.body_size = body_size
-        self.s = RUDP.Connection(timeoutval=cl_timeout,packet_size=self.packet_size)
+        self.window_size = window_size
+        self.buffer_size = buffer_size
+        self.s = RUDP.Connection(timeoutval=cl_timeout,packet_size=self.packet_size,window_size=self.window_size,buffer_size=self.buffer_size)
         self.s.bind(self.self_host,self.self_port)
 
         print("Initiating Handshake")
@@ -102,10 +107,13 @@ class Client:
                 self.last_received_time = time.time()
                 if(line.packet.split("~")[2]=="True"):
                     print("Server closing connection")
+                    finack = RUDP.Packet(0,1,1,0,0,bytes("FIN ACK",encoding='utf-8'))
+                    self.s.send(finack,self.target_host,self.target_port)
+                    print("Sent FIN ACK to server")
                     break
                 elif(packet_params[1]=="False" and packet_params[2]=="False" and packet_params[3]=="False"):  # and packet_params[4]!="4" Add packet number here to check for packet los
                     print(f"Packet {packet_params[4]} ok")
-                    ack_pack = RUDP.Packet(0,0,1,0,int(packet_params[4]),bytes("ACK Packet", 'utf-8'))
+                    ack_pack = RUDP.Packet(0,0,1,(int(packet_params[4])%self.buffer_size),int(packet_params[4]),bytes("ACK Packet", 'utf-8'))
                     self.s.send(ack_pack,self.target_host,self.target_port)
                 pno = int(line.packet.split("~")[4])
                 temp = line.payload
@@ -182,5 +190,5 @@ class Client:
 
 
 if __name__ == '__main__':
-    c1 = Client("127.0.0.1",65431,"127.0.0.1",65432,"sample.png",packet_size=10000,body_size=8000)
+    c1 = Client("127.0.0.1",65431,"127.0.0.1",65432,"sample.png",packet_size=10000,body_size=8000,window_size=3,buffer_size=6)
 

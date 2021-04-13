@@ -50,12 +50,14 @@ class Server:
     ## Filename
     filename = 0
 
+    buffer_size = 0
+
     ## The constructor for the Server class
     #
     # This constructor fills in the values for the class variables and starts with the process of sending the file to the client.
     # It reads the filename from the request and starts reading the file in the folder and encodes it using base64. It then starts sending the encoded file in packets of defined size. It creates threads for sending each of the packets and then wait for ACKs and acts accordingly based on the response. 
     # After all the packets have been sent and ACKed the process of terminating the connection starts and then the connection between server and client is closed.
-    def __init__(self,self_host,self_port,target_host,target_port,retransmission_counter,window_size,sleep_time,serv_timeout=30,packet_size=10024,body_size=8000):
+    def __init__(self,self_host,self_port,target_host,target_port,retransmission_counter,window_size,sleep_time,serv_timeout=30,packet_size=10024,body_size=8000,buffer_size=6):
         self.target_host = str(target_host)
         self.target_port = target_port
         self.self_host = str(self_host)
@@ -67,7 +69,8 @@ class Server:
         self.serv_timeout = serv_timeout
         self.packet_size = packet_size
         self.body_size = body_size
-        self.s = RUDP.Connection(timeoutval=self.serv_timeout,packet_size=self.packet_size)
+        self.buffer_size = buffer_size
+        self.s = RUDP.Connection(timeoutval=self.serv_timeout,packet_size=self.packet_size,window_size=self.window_size,buffer_size=self.buffer_size)
         self.s.bind(self.self_host,self.self_port)
 
 
@@ -200,10 +203,12 @@ class Server:
         fin_packet = RUDP.Packet(0,1,0,0,0,bytes("End Connection", 'utf-8'))
         self.s.send(fin_packet,self.target_host,self.target_port)
         print("Server ending connection")
+        finack = self.s.recv(self.target_host,self.target_port)
+        print("Received Client termination ACK")
         return
 
 if __name__ == '__main__':
-    s1 = Server("127.0.0.1",65432,"127.0.0.1",65431,5,3,3,packet_size=10000,body_size=8000)
+    s1 = Server("127.0.0.1",65432,"127.0.0.1",65431,5,3,3,packet_size=10000,body_size=8000,buffer_size=6)
 
 
 
