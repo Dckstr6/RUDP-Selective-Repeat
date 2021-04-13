@@ -17,8 +17,7 @@ import os
 #  This can take place for a maximum of 5 times or maximum time of 30s (default values), whichever comes first
 #  
 class Connection:
-	## max no of retransmits
-	max_retransmits = 0
+
 	## packet size
 	packet_size = 0
 	## socket
@@ -35,10 +34,9 @@ class Connection:
 	#  @param self The object pointer
 	#  @param packet_size packet size
 	#  @param max_retransmits max no of retransmits
-	def __init__(self,packet_size=10024,timeoutval=30,max_retransmits = 5,window_size = 3,buffer_size=6):
+	def __init__(self,packet_size=10024,timeoutval=30,window_size = 3,buffer_size=6):
 		self.packet_size = packet_size
 		self.timeoutval = timeoutval
-		self.max_retransmits = max_retransmits
 
 	## Send packet to client or send acknowledgement to server
 	#
@@ -50,13 +48,10 @@ class Connection:
 	def send(self,packet,target_host,port):
 		packet_params = packet.packet.split('~')
 		pno = packet_params[4]
-		# packet_bytes = packet.packet.encode("ascii")
-		# base64_bytes = base64.b64encode(packet_bytes)
-		# base64_string = base64_bytes.decode("ascii")
 		self.s.sendto(bytes(packet.packet, encoding="utf-8"),(str(target_host),int(port)))
-		if(packet_params[3]=="False" and packet_params[1]!="True"):
+		if(packet_params[3]=="False" and packet_params[1]!="True" and packet_params[2]!="True"):
 			print(f"Sent packet {pno}")
-		elif(packet_params[3]=="True" and packet_params[1]!="True"):
+		elif(packet_params[3]=="True" and packet_params[1]!="True" and packet_params[2]!="True"):
 			print(f"Sent ACK {packet_params[5]}")
 
 	## Bind server/client

@@ -106,9 +106,9 @@ class Client:
                 packet_params = line.packet.split("~")
                 self.last_received_time = time.time()
                 if(line.packet.split("~")[2]=="True"):
-                    print("Server closing connection")
+                    print("Received FIN Packet, Server closing connection")
                     finack = RUDP.Packet(0,1,1,0,0,bytes("FIN ACK",encoding='utf-8'))
-                    self.s.send(finack,self.target_host,self.target_port)
+                    #self.s.send(finack,self.target_host,self.target_port)
                     print("Sent FIN ACK to server")
                     break
                 elif(packet_params[1]=="False" and packet_params[2]=="False" and packet_params[3]=="False"):  # and packet_params[4]!="4" Add packet number here to check for packet los

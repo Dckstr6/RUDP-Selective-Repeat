@@ -52,6 +52,8 @@ class Server:
 
     buffer_size = 0
 
+    is_fin_acked = 0
+
     ## The constructor for the Server class
     #
     # This constructor fills in the values for the class variables and starts with the process of sending the file to the client.
@@ -72,7 +74,7 @@ class Server:
         self.buffer_size = buffer_size
         self.s = RUDP.Connection(timeoutval=self.serv_timeout,packet_size=self.packet_size,window_size=self.window_size,buffer_size=self.buffer_size)
         self.s.bind(self.self_host,self.self_port)
-
+        self.is_fin_acked = 0
 
         while(True):
             conn_pac = self.s.recv(self.target_host,self.target_port)
@@ -116,8 +118,15 @@ class Server:
         for i in range(self.total_packets):
             self.all_threads[i].join()
         thread_ack.join()
-
-        self.end_connection()
+        print("Server ending connection")
+        fin_thread = threading.Thread(target=self.end_connection,args=())
+        fin_thread.start()
+        while(True):
+            finack = self.s.recv(self.target_host,self.target_port)
+            if(finack.packet.split("~")[2]=="True" and finack.packet.split("~")[3]=="True"):
+                print("Received Client termination ACK")
+                self.is_fin_acked = 1
+                break
         self.s.close()
         # print(self.total_data)
         os._exit(0)
@@ -136,7 +145,7 @@ class Server:
             time.sleep(self.sleep_time)
             if(self.ack_array[packet_no]==1):
                 break
-            elif(retries < self.s.max_retransmits):
+            elif(retries < self.retransmission_counter):
                 print(f"ACK for packet {packet_no} is not received, resending packet again ({retries})")
                 retries += 1
                 self.s.send(sending_packet,self.target_host,self.target_port)
@@ -194,11 +203,15 @@ class Server:
     # 
     # This method when invoked initiates the closing of the connection between the server and the client
     def end_connection(self):
-        fin_packet = RUDP.Packet(0,1,0,0,0,bytes("End Connection", 'utf-8'))
-        self.s.send(fin_packet,self.target_host,self.target_port)
-        print("Server ending connection")
-        finack = self.s.recv(self.target_host,self.target_port)
-        print("Received Client termination ACK")
+        while(True):
+            fin_packet = RUDP.Packet(0,1,0,0,0,bytes("End Connection", 'utf-8'))
+            self.s.send(fin_packet,self.target_host,self.target_port)
+            time.sleep(self.sleep_time)
+            if(self.is_fin_acked==1):
+                break
+            else:
+                print("Client FINACK not received, resending")
+                continue
         return
 
 if __name__ == '__main__':
