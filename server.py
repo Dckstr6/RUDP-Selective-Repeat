@@ -128,6 +128,7 @@ class Server:
     #
     # This method when invoked creates the packet, send it and waits for an ACK. Based on the response from the client, the method acts accordingly (as specified in the design documentation) 
     def send_this_packet(self,packet_no):
+        retries = 0
         while(True):
             packet_body = self.total_data[(self.body_size*packet_no):min(self.body_size*(packet_no+1),len(self.total_data))]
             sending_packet = RUDP.Packet(0,0,0,packet_no,(packet_no % self.buffer_size),packet_body)
