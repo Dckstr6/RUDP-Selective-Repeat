@@ -103,10 +103,15 @@ class Server:
         self.last_received_time = time.time()
         thread_timer = threading.Thread(target=self.global_timer,args=())
         thread_timer.start()
-        for i in range(self.total_packets):
-            tx = threading.Thread(target=self.send_this_packet,args=(i,))
-            tx.start()
-            self.all_threads.append(tx)
+        thread_counter = 0
+        while(thread_counter < self.total_packets):
+            if(thread_counter >= self.send_base and thread_counter <= self.send_head):
+                tx = threading.Thread(target=self.send_this_packet,args=(thread_counter,))
+                tx.start()
+                self.all_threads.append(tx)
+                thread_counter += 1
+            else:
+                continue
 
         for i in range(self.total_packets):
             self.all_threads[i].join()
@@ -123,34 +128,22 @@ class Server:
     #
     # This method when invoked creates the packet, send it and waits for an ACK. Based on the response from the client, the method acts accordingly (as specified in the design documentation) 
     def send_this_packet(self,packet_no):
-        ## variable to store the number of retransmissions
-        retries = 0
-        ## the variable that stores information whether the packet has been sent succesfully or not
-        flag = 0
-
-        while(flag==0):
-            if(packet_no >= self.send_base and packet_no <= self.send_head):
-                print(f"Able to send packet {packet_no}")
-                flag = 1
-                while(True):
-                    packet_body = self.total_data[(self.body_size*packet_no):min(self.body_size*(packet_no+1),len(self.total_data))]
-                    sending_packet = RUDP.Packet(0,0,0,packet_no,(packet_no % self.buffer_size),packet_body)
-                    self.s.send(sending_packet,self.target_host,self.target_port)
-                    time.sleep(self.sleep_time)
-                    if(self.ack_array[packet_no]==1):
-                        break
-                    elif(retries < self.s.max_retransmits):
-                        print(f"ACK for packet {packet_no} is not received, resending packet again ({retries})")
-                        retries += 1
-                        self.s.send(sending_packet,self.target_host,self.target_port)
-                        continue
-                    else:
-                        print("Exceeded maximum retransmits, terminating connection......")
-                        self.end_connection()
-                        os._exit(0)
+        while(True):
+            packet_body = self.total_data[(self.body_size*packet_no):min(self.body_size*(packet_no+1),len(self.total_data))]
+            sending_packet = RUDP.Packet(0,0,0,packet_no,(packet_no % self.buffer_size),packet_body)
+            self.s.send(sending_packet,self.target_host,self.target_port)
+            time.sleep(self.sleep_time)
+            if(self.ack_array[packet_no]==1):
                 break
-            else:
+            elif(retries < self.s.max_retransmits):
+                print(f"ACK for packet {packet_no} is not received, resending packet again ({retries})")
+                retries += 1
+                self.s.send(sending_packet,self.target_host,self.target_port)
                 continue
+            else:
+                print("Exceeded maximum retransmits, terminating connection......")
+                self.end_connection()
+                os._exit(0)
         return
     
     ## listen_for_ack Method
