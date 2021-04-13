@@ -113,7 +113,7 @@ class Client:
                     break
                 elif(packet_params[1]=="False" and packet_params[2]=="False" and packet_params[3]=="False"):  # and packet_params[4]!="4" Add packet number here to check for packet los
                     print(f"Packet {packet_params[4]} ok")
-                    ack_pack = RUDP.Packet(0,0,1,(int(packet_params[4])%self.buffer_size),int(packet_params[4]),bytes("ACK Packet", 'utf-8'))
+                    ack_pack = RUDP.Packet(0,0,1,(int(packet_params[4])),int(packet_params[4])%self.buffer_size,bytes("ACK Packet", 'utf-8'))
                     self.s.send(ack_pack,self.target_host,self.target_port)
                 pno = int(line.packet.split("~")[4])
                 temp = line.payload
@@ -190,5 +190,5 @@ class Client:
 
 
 if __name__ == '__main__':
-    c1 = Client("127.0.0.1",65431,"127.0.0.1",65432,"sample.png",packet_size=10000,body_size=8000,window_size=3,buffer_size=6)
+    c1 = Client("127.0.0.1",50126,"127.0.0.1",50125,"sample.png",packet_size=10024,body_size=9000,window_size=10,buffer_size=20)
 

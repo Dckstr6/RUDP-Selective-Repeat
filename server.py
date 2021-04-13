@@ -134,7 +134,7 @@ class Server:
                 flag = 1
                 while(True):
                     packet_body = self.total_data[(self.body_size*packet_no):min(self.body_size*(packet_no+1),len(self.total_data))]
-                    sending_packet = RUDP.Packet(0,0,0,packet_no,0,packet_body)
+                    sending_packet = RUDP.Packet(0,0,0,packet_no,(packet_no % self.buffer_size),packet_body)
                     self.s.send(sending_packet,self.target_host,self.target_port)
                     time.sleep(self.sleep_time)
                     if(self.ack_array[packet_no]==1):
@@ -161,7 +161,7 @@ class Server:
         while(self.number_of_acked_packets < self.total_packets):
             response = self.s.recv(self.target_host,self.target_port)
             if(response.packet.split("~")[3]=="True"):
-                ack_no = int(response.packet.split("~")[5])
+                ack_no = int(response.packet.split("~")[4])
                 print(f"Received ACK for packet {ack_no}")
                 self.mutex.acquire()
                 if(self.ack_array[ack_no]==0):
@@ -208,7 +208,7 @@ class Server:
         return
 
 if __name__ == '__main__':
-    s1 = Server("127.0.0.1",65432,"127.0.0.1",65431,5,3,3,packet_size=10000,body_size=8000,buffer_size=6)
+    s1 = Server("127.0.0.1",50125,"127.0.0.1",50126,5,10,3,packet_size=10024,body_size=9000,buffer_size=20)
 
 
 
