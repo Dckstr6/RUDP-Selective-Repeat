@@ -125,7 +125,9 @@ class Server:
             finack = self.s.recv(self.target_host,self.target_port)
             if(finack.packet.split("~")[2]=="True" and finack.packet.split("~")[3]=="True"):
                 print("Received Client termination ACK")
+                self.mutex.acquire()
                 self.is_fin_acked = 1
+                self.mutex.release()
                 break
         self.s.close()
         # print(self.total_data)
@@ -195,7 +197,8 @@ class Server:
                 print(f"Timeoutval is {self.s.timeoutval}")
                 print(f"Time.Time is {time.time()}")
                 print(f"Last Received Time is {self.last_received_time}")
-                print("Global Timer exceeded")
+                print("Global Timer exceeded, ending connection")
+                self.end_connection()
                 os._exit(0)
 
     ## end_connection Method
@@ -206,7 +209,7 @@ class Server:
         while(True):
             fin_packet = RUDP.Packet(0,1,0,0,0,bytes("End Connection", 'utf-8'))
             self.s.send(fin_packet,self.target_host,self.target_port)
-            time.sleep(self.sleep_time)
+            time.sleep(1)
             if(self.is_fin_acked==1):
                 break
             else:

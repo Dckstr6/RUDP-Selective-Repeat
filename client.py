@@ -108,7 +108,7 @@ class Client:
                 if(line.packet.split("~")[2]=="True"):
                     print("Received FIN Packet, Server closing connection")
                     finack = RUDP.Packet(0,1,1,0,0,bytes("FIN ACK",encoding='utf-8'))
-                    #self.s.send(finack,self.target_host,self.target_port)
+                    self.s.send(finack,self.target_host,self.target_port)
                     print("Sent FIN ACK to server")
                     break
                 elif(packet_params[1]=="False" and packet_params[2]=="False" and packet_params[3]=="False"):  # and packet_params[4]!="4" Add packet number here to check for packet los
@@ -178,6 +178,19 @@ class Client:
                 print(f"Time.Time is {time.time()}")
                 print(f"Last Received Time is {self.last_received_time}")
                 print("Global Timer exceeded")
+                od = OrderedDict(sorted(self.packet_list.items()))
+                for no,body in od.items():
+                    self.write_list += body
+                # print((base64.decodebytes(self.write_list)).decode())
+                output_file = "output."
+                temp = self.request.split(".")
+                output_file += temp[1]
+                # final_write_list = final_write_list.decode('ascii')
+                # print(self.write_list)
+                with open(output_file,"wb") as f:
+                    final = (base64.decodebytes(self.write_list))
+                    f.write(final)
+                print(f"Written to {output_file}")
                 os._exit(0)
 
 
