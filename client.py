@@ -191,7 +191,7 @@ class Client:
                     final = (base64.decodebytes(self.write_list))
                     f.write(final)
                 print(f"Written to {output_file}")
-                os._exit(0)
+                os._exit(1)
 
 
     ## Total time runnning

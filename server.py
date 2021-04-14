@@ -155,7 +155,7 @@ class Server:
             else:
                 print("Exceeded maximum retransmits, terminating connection......")
                 self.end_connection()
-                os._exit(0)
+                os._exit(2)
         return
     
     ## listen_for_ack Method
@@ -199,7 +199,7 @@ class Server:
                 print(f"Last Received Time is {self.last_received_time}")
                 print("Global Timer exceeded, ending connection")
                 self.end_connection()
-                os._exit(0)
+                os._exit(1)
 
     ## end_connection Method
     # @param self is the object pointer
