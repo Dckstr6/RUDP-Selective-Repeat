@@ -208,20 +208,19 @@ class Server:
         return
 
 if __name__ == '__main__':
-    s1 = Server("127.0.0.1",65432,"127.0.0.1",65431,5,3,3)
-        
-    # self_host = sys.argv[1]
-    # self_port = sys.argv[2]
-    # target_host = sys.argv[3]
-    # target_port = sys.argv[4]
-    # rtc = int(sys.argv[5])
-    # rtt = int(sys.argv[6])
-    # window = int(sys.argv[7])
-    # global_timer = int(sys.argv[8])
-    # pkt_size = int(sys.argv[9])
-    # buffer_size = int(sys.argv[10])
     # s1 = Server("127.0.0.1",65432,"127.0.0.1",65431,5,3,3)
-    # s1 = Server(self_host,self_port,target_host,target_port,rtc,window,rtt,global_timer,pkt_size,buffer_size)
+        
+    self_host = sys.argv[1]
+    self_port = sys.argv[2]
+    target_host = sys.argv[3]
+    target_port = sys.argv[4]
+    rtc = int(sys.argv[5])
+    rtt = int(sys.argv[6])
+    window = int(sys.argv[7])
+    global_timer = int(sys.argv[8])
+    pkt_size = int(sys.argv[9])
+    buffer_size = int(sys.argv[10])
+    s1 = Server(self_host,self_port,target_host,target_port,rtc,window,rtt,global_timer,pkt_size,buffer_size)
 
 
 
