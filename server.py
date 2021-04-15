@@ -53,7 +53,6 @@ class Server:
 
     buffer_size = 0
 
-    is_fin_acked = 0
 
     ## The constructor for the Server class
     #
@@ -96,7 +95,10 @@ class Server:
         except IOError:
             print(f"Error File {self.filename} not found")
             self.end_connection()
-            os._exit(0)
+            finack = self.s.recv(self.target_host,self.target_port)
+            if(finack.packet.split("~")[2]=="True" and finack.packet.split("~")[3]=="True"):
+                print("Received Client termination ACK")
+            os._exit(3)
         self.total_packets = math.ceil(len(self.total_data)/(self.body_size))
         print(f"Total packets are {self.total_packets}")
         for i in range(0,self.total_packets):
@@ -120,16 +122,10 @@ class Server:
             self.all_threads[i].join()
         thread_ack.join()
         print("Server ending connection")
-        fin_thread = threading.Thread(target=self.end_connection,args=())
-        fin_thread.start()
-        while(True):
-            finack = self.s.recv(self.target_host,self.target_port)
-            if(finack.packet.split("~")[2]=="True" and finack.packet.split("~")[3]=="True"):
-                print("Received Client termination ACK")
-                self.mutex.acquire()
-                self.is_fin_acked = 1
-                self.mutex.release()
-                break
+        self.end_connection()
+        finack = self.s.recv(self.target_host,self.target_port)
+        if(finack.packet.split("~")[2]=="True" and finack.packet.split("~")[3]=="True"):
+            print("Received Client termination ACK")
         self.s.close()
         # print(self.total_data)
         os._exit(0)
@@ -207,31 +203,25 @@ class Server:
     # 
     # This method when invoked initiates the closing of the connection between the server and the client
     def end_connection(self):
-        while(True):
-            fin_packet = RUDP.Packet(0,1,0,0,0,bytes("End Connection", 'utf-8'))
-            self.s.send(fin_packet,self.target_host,self.target_port)
-            time.sleep(1)
-            if(self.is_fin_acked==1):
-                break
-            else:
-                print("Client FINACK not received, resending")
-                continue
+        fin_packet = RUDP.Packet(0,1,0,0,0,bytes("End Connection", 'utf-8'))
+        self.s.send(fin_packet,self.target_host,self.target_port)
         return
+
 if __name__ == '__main__':
-    # s1 = Server("127.0.0.1",65432,"127.0.0.1",65431,5,3,3)
+    s1 = Server("127.0.0.1",65432,"127.0.0.1",65431,5,3,3)
         
-    self_host = sys.argv[1]
-    self_port = sys.argv[2]
-    target_host = sys.argv[3]
-    target_port = sys.argv[4]
-    rtc = int(sys.argv[5])
-    rtt = int(sys.argv[6])
-    window = int(sys.argv[7])
-    global_timer = int(sys.argv[8])
-    pkt_size = int(sys.argv[9])
-    buffer_size = int(sys.argv[10])
+    # self_host = sys.argv[1]
+    # self_port = sys.argv[2]
+    # target_host = sys.argv[3]
+    # target_port = sys.argv[4]
+    # rtc = int(sys.argv[5])
+    # rtt = int(sys.argv[6])
+    # window = int(sys.argv[7])
+    # global_timer = int(sys.argv[8])
+    # pkt_size = int(sys.argv[9])
+    # buffer_size = int(sys.argv[10])
     # s1 = Server("127.0.0.1",65432,"127.0.0.1",65431,5,3,3)
-    s1 = Server(self_host,self_port,target_host,target_port,rtc,window,rtt,global_timer,pkt_size,buffer_size)
+    # s1 = Server(self_host,self_port,target_host,target_port,rtc,window,rtt,global_timer,pkt_size,buffer_size)
 
 
 
