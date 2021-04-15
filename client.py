@@ -1,6 +1,7 @@
 import socket
 import RUDP
 import os
+import sys
 import threading
 import time
 from collections import OrderedDict
@@ -55,7 +56,7 @@ class Client:
     #  @param cl_timeout timeout value
     #  @param packet_size packet size
     #  @param body_size body size
-    def __init__(self,self_host,self_port,target_host,target_port,file_request,cl_timeout=30,packet_size=10024,body_size=8000,window_size=3,buffer_size=6):
+    def __init__(self,self_host,self_port,target_host,target_port,file_request,cl_timeout,packet_size,window_size,buffer_size,body_size=8000):
         start = timeit.default_timer()
         self.target_host = str(target_host)
         self.target_port = target_port
@@ -200,8 +201,17 @@ class Client:
         current_time = time.time()
         elap = current_time - self.start_time
         return elap
-
-
 if __name__ == '__main__':
-    c1 = Client("127.0.0.1",50126,"127.0.0.1",50125,"sample.png",packet_size=10024,body_size=9000,window_size=10,buffer_size=20)
+    # c1 = Client("127.0.0.1",65431,"127.0.0.1",65432,"sample.png")
+    self_host = sys.argv[1]
+    self_port = sys.argv[2]
+    target_host = sys.argv[3]
+    target_port = sys.argv[4]
+    file_request = sys.argv[5]
+    global_timer = int(sys.argv[6])
+    pkt_size = int(sys.argv[7])
+    window_size = int(sys.argv[8])
+    buff_size = int(sys.argv[9])
+    # c1 = Client("127.0.0.1",65431,"127.0.0.1",65432,"sample.txt")
+    c1 = Client(self_host,self_port,target_host,target_port,file_request,global_timer,pkt_size,window_size,buff_size)
 

@@ -4,6 +4,7 @@ import math
 import time
 import threading
 import os
+import sys
 import base64
 
 ##  Server class
@@ -59,7 +60,7 @@ class Server:
     # This constructor fills in the values for the class variables and starts with the process of sending the file to the client.
     # It reads the filename from the request and starts reading the file in the folder and encodes it using base64. It then starts sending the encoded file in packets of defined size. It creates threads for sending each of the packets and then wait for ACKs and acts accordingly based on the response. 
     # After all the packets have been sent and ACKed the process of terminating the connection starts and then the connection between server and client is closed.
-    def __init__(self,self_host,self_port,target_host,target_port,retransmission_counter,window_size,sleep_time,serv_timeout=30,packet_size=10024,body_size=8000,buffer_size=6):
+    def __init__(self,self_host,self_port,target_host,target_port,retransmission_counter,window_size,sleep_time,serv_timeout=30,packet_size=10024,buffer_size=6,body_size=8000):
         self.target_host = str(target_host)
         self.target_port = target_port
         self.self_host = str(self_host)
@@ -216,9 +217,21 @@ class Server:
                 print("Client FINACK not received, resending")
                 continue
         return
-
 if __name__ == '__main__':
-    s1 = Server("127.0.0.1",50125,"127.0.0.1",50126,5,10,3,packet_size=10024,body_size=9000,buffer_size=20)
+    # s1 = Server("127.0.0.1",65432,"127.0.0.1",65431,5,3,3)
+        
+    self_host = sys.argv[1]
+    self_port = sys.argv[2]
+    target_host = sys.argv[3]
+    target_port = sys.argv[4]
+    rtc = int(sys.argv[5])
+    rtt = int(sys.argv[6])
+    window = int(sys.argv[7])
+    global_timer = int(sys.argv[8])
+    pkt_size = int(sys.argv[9])
+    buffer_size = int(sys.argv[10])
+    # s1 = Server("127.0.0.1",65432,"127.0.0.1",65431,5,3,3)
+    s1 = Server(self_host,self_port,target_host,target_port,rtc,window,rtt,global_timer,pkt_size,buffer_size)
 
 
 
