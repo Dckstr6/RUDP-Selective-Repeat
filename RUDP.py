@@ -37,6 +37,8 @@ class Connection:
 	def __init__(self,packet_size=10024,timeoutval=30,window_size = 3,buffer_size=6):
 		self.packet_size = packet_size
 		self.timeoutval = timeoutval
+		self.window_size = window_size
+		self.buffer_size = buffer_size
 
 	## Send packet to client or send acknowledgement to server
 	#
