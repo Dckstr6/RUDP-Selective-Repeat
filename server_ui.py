@@ -114,6 +114,7 @@ class Ui_Server(object):
         self.s_status.setObjectName("s_status")
         self.sbtn = QtWidgets.QPushButton(self.centralwidget)
         self.sbtn.setGeometry(QtCore.QRect(200, 490, 171, 28))
+        self.sbtn.clicked.connect(self.button_clicked)
         font = QtGui.QFont()
         font.setFamily("Ubuntu Condensed")
         font.setBold(True)

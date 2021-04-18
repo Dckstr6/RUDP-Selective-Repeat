@@ -80,6 +80,7 @@ class Ui_Client(object):
         self.c_status.setObjectName("c_status")
         self.cbtn = QtWidgets.QPushButton(self.centralwidget)
         self.cbtn.setGeometry(QtCore.QRect(180, 450, 171, 28))
+        self.cbtn.clicked.connect(self.button_clicked)
         font = QtGui.QFont()
         font.setFamily("Ubuntu Condensed")
         font.setBold(True)
