@@ -220,7 +220,8 @@ if __name__ == '__main__':
     global_timer = float(sys.argv[8])
     pkt_size = int(sys.argv[9])
     buffer_size = int(sys.argv[10])
-    s1 = Server(self_host,self_port,target_host,target_port,rtc,window,rtt,global_timer,pkt_size,buffer_size)
+    bodysize = int(sys.argv[11])
+    s1 = Server(self_host,self_port,target_host,target_port,rtc,window,rtt,global_timer,pkt_size,buffer_size,bodysize)
 
 
 

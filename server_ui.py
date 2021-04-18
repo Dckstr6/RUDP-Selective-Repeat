@@ -19,9 +19,9 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Server(object):
     def setupUi(self, Server):
         Server.setObjectName("Server")
-        Server.resize(547, 714)
-        Server.setMinimumSize(QtCore.QSize(547, 714))
-        Server.setMaximumSize(QtCore.QSize(547, 714))
+        Server.resize(547, 754)
+        Server.setMinimumSize(QtCore.QSize(547, 754))
+        Server.setMaximumSize(QtCore.QSize(547, 754))
         self.centralwidget = QtWidgets.QWidget(Server)
         self.centralwidget.setObjectName("centralwidget")
         self.s_ip_lbl = QtWidgets.QLabel(self.centralwidget)
@@ -74,7 +74,7 @@ class Ui_Server(object):
         self.gt_lbl.setFont(font)
         self.gt_lbl.setObjectName("gt_lbl")
         self.window_size = QtWidgets.QLabel(self.centralwidget)
-        self.window_size.setGeometry(QtCore.QRect(100, 400, 171, 16))
+        self.window_size.setGeometry(QtCore.QRect(100, 440, 171, 16))
         font = QtGui.QFont()
         font.setPointSize(12)
         self.window_size.setFont(font)
@@ -104,29 +104,29 @@ class Ui_Server(object):
         self.pktsize_txt.setGeometry(QtCore.QRect(320, 360, 113, 22))
         self.pktsize_txt.setObjectName("pktsize_txt")
         self.winsize_txt = QtWidgets.QLineEdit(self.centralwidget)
-        self.winsize_txt.setGeometry(QtCore.QRect(320, 400, 113, 22))
+        self.winsize_txt.setGeometry(QtCore.QRect(320, 440, 113, 22))
         self.winsize_txt.setObjectName("winsize_txt")
         self.s_status = QtWidgets.QTextBrowser(self.centralwidget)
-        self.s_status.setGeometry(QtCore.QRect(120, 540, 321, 91))
+        self.s_status.setGeometry(QtCore.QRect(120, 590, 321, 91))
         font = QtGui.QFont()
         font.setPointSize(12)
         self.s_status.setFont(font)
         self.s_status.setObjectName("s_status")
         self.sbtn = QtWidgets.QPushButton(self.centralwidget)
-        self.sbtn.setGeometry(QtCore.QRect(200, 490, 171, 28))
-        self.sbtn.clicked.connect(self.button_clicked)
+        self.sbtn.setGeometry(QtCore.QRect(200, 540, 171, 28))
         font = QtGui.QFont()
         font.setFamily("Ubuntu Condensed")
         font.setBold(True)
         font.setWeight(75)
         self.sbtn.setFont(font)
         self.sbtn.setObjectName("sbtn")
+        self.sbtn.clicked.connect(self.button_clicked)
         self.buffer_siz_txt = QtWidgets.QLineEdit(self.centralwidget)
-        self.buffer_siz_txt.setGeometry(QtCore.QRect(320, 440, 113, 22))
+        self.buffer_siz_txt.setGeometry(QtCore.QRect(320, 480, 113, 22))
         self.buffer_siz_txt.setStatusTip("")
         self.buffer_siz_txt.setObjectName("buffer_siz_txt")
         self.buffer_size_lbl = QtWidgets.QLabel(self.centralwidget)
-        self.buffer_size_lbl.setGeometry(QtCore.QRect(100, 440, 171, 16))
+        self.buffer_size_lbl.setGeometry(QtCore.QRect(100, 480, 101, 16))
         font = QtGui.QFont()
         font.setPointSize(12)
         self.buffer_size_lbl.setFont(font)
@@ -140,6 +140,15 @@ class Ui_Server(object):
         font.setWeight(75)
         self.title_lbl.setFont(font)
         self.title_lbl.setObjectName("title_lbl")
+        self.body_size_lbl = QtWidgets.QLabel(self.centralwidget)
+        self.body_size_lbl.setGeometry(QtCore.QRect(100, 400, 81, 16))
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        self.body_size_lbl.setFont(font)
+        self.body_size_lbl.setObjectName("body_size_lbl")
+        self.bodysize_txt = QtWidgets.QLineEdit(self.centralwidget)
+        self.bodysize_txt.setGeometry(QtCore.QRect(320, 400, 113, 22))
+        self.bodysize_txt.setObjectName("bodysize_txt")
         Server.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(Server)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 547, 22))
@@ -184,10 +193,12 @@ class Ui_Server(object):
         self.sbtn.setStatusTip(_translate("Server", "Start Server"))
         self.sbtn.setText(_translate("Server", "Start Server"))
         self.buffer_siz_txt.setText(_translate("Server", "20"))
-        self.buffer_size_lbl.setStatusTip(_translate("Server", "BUffer Size"))
+        self.buffer_size_lbl.setStatusTip(_translate("Server", "Buffer Size"))
         self.buffer_size_lbl.setText(_translate("Server", "Buffer Size"))
         self.title_lbl.setText(_translate("Server", "Selective Repeat RUDP"))
-
+        self.body_size_lbl.setStatusTip(_translate("Server", "Buffer Size"))
+        self.body_size_lbl.setText(_translate("Server", "Body Size"))
+        self.bodysize_txt.setText(_translate("Server", "8000"))
 
    
     def button_clicked(self):
@@ -201,8 +212,10 @@ class Ui_Server(object):
         packet_size = self.pktsize_txt.text()
         window_size = self.winsize_txt.text()
         rtt = self.rtt_txt.text()
+        bodysize = self.bodysize_txt.text()
         buffer_size = self.buffer_siz_txt.text()
 
+      
         if(not (server_ip and server_ip.strip())):
             self.s_status.append("Please enter Server IP Address")
             return 
@@ -219,7 +232,8 @@ class Ui_Server(object):
             self.s_status.append("Please assign a Port Number for Client")
             return
 
-
+        if(not (bodysize) and bodysize.strip()):
+            bodysize = "8000"
         if(not (buffer_size and buffer_size.strip())):
             buffer_size = "20"
         if(not (rtc and rtc.strip())):
@@ -235,7 +249,7 @@ class Ui_Server(object):
 
 
         start = timeit.default_timer()
-        args = ['python3', 'server.py' , server_ip , server_port , client_ip , client_port , rtc, window_size, rtt, global_timer, packet_size,buffer_size ]
+        args = ['python3', 'server.py' , server_ip , server_port , client_ip , client_port , rtc, window_size, rtt, global_timer, packet_size,buffer_size,bodysize]
         # args = ['python3', 'server.py' , "127.0.0.1" , "50125" , "127.0.0.1" , "50126" , "5","3","3","30","10024","20"]
         s = subprocess.run(args)
         end  = timeit.default_timer()
