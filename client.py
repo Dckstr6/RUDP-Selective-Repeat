@@ -224,5 +224,6 @@ if __name__ == '__main__':
     pkt_size = int(sys.argv[7])
     window_size = int(sys.argv[8])
     buff_size = int(sys.argv[9])
-    c1 = Client(self_host,self_port,target_host,target_port,file_request,global_timer,pkt_size,window_size,buff_size)
+    body_size = int(sys.argv[10])
+    c1 = Client(self_host,self_port,target_host,target_port,file_request,global_timer,pkt_size,window_size,buff_size,body_size)
 
