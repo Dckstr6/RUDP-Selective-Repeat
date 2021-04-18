@@ -209,7 +209,7 @@ if __name__ == '__main__':
     target_host = sys.argv[3]
     target_port = sys.argv[4]
     file_request = sys.argv[5]
-    global_timer = int(sys.argv[6])
+    global_timer = float(sys.argv[6])
     pkt_size = int(sys.argv[7])
     window_size = int(sys.argv[8])
     buff_size = int(sys.argv[9])
