@@ -17,8 +17,7 @@ import os
 #  This can take place for a maximum of 5 times or maximum time of 30s (default values), whichever comes first
 #  
 class Connection:
-	## max no of retransmits
-	max_retransmits = 0
+
 	## packet size
 	packet_size = 0
 	## socket
@@ -26,72 +25,20 @@ class Connection:
 	## timeout value
 	timeoutval = 0
 
-	# Problem is due to this packet size in client.
+	window_size = 0
+
+	buffer_size = 0
 
 	## Class constructor
 	# 
 	#  @param self The object pointer
 	#  @param packet_size packet size
 	#  @param max_retransmits max no of retransmits
-	def __init__(self,packet_size=10024,timeoutval=30,max_retransmits = 5):
+	def __init__(self,packet_size=10024,timeoutval=30,window_size = 3,buffer_size=6):
 		self.packet_size = packet_size
 		self.timeoutval = timeoutval
-		self.max_retransmits = max_retransmits
-
-	## connect client to server
-	# 
-	#  Used to connect client to the server.
-	#  Three way handshake is implemented here
-	#  @param self The object pointer
-	#  @param target_host server ip
-	#  @param port server port
-	#  @param request requested file name
-	def connect(self,target_host,port,request):
-		syn_pac = Packet(1,0,0,0,0,bytes("First Packet", 'utf-8'))
-		self.send(syn_pac,target_host,port)
-		print("Client Connection Request Sent")
-		ack = ""
-		while(True):
-			time.sleep(0.5)
-			ack = self.recv(target_host,port)
-			if ack is not None:
-				break
-			else:
-				self.send(syn_pac,target_host,port)
-				continue
-		if(ack.packet.split("~")[1]=="1" and ack.packet.split("~")[3]=="1"):
-			print("Server Connection ACK received")
-			req_pac = Packet(1,0,0,0,0,bytes(request, 'utf-8'))  # SYN is 1 here..
-			self.send(req_pac,target_host,port)
-			print("File Request Sent")
-		return
-
-	## Listen to connection requests
-	#
-	#  Used to listen for connection requests. Three way handshake implemented
-	#  Calls the function to send the file before exitting
-	#  @param self The object pointer
-	#  @param target_host client ip
-	#  @param port client port
-	def listen(self,target_host,port):
-		conn_req = self.recv(target_host,port)
-		if(conn_req.packet.split("~")[1]=="1" and conn_req.packet.split("~")[4]=="0"):
-			print("Client Connection request received")
-			req_pac = ""
-			while(True):
-				ack_pac = Packet(1,0,1,0,0,bytes("ACK Packet", 'utf-8'))
-				self.send(ack_pac,target_host,port)
-				print("Server connection ACK sent")
-				time.sleep(0.5)
-				req_pac = self.recv(target_host,port)
-				if req_pac is not None:
-					print(f"Client File request received")
-					break
-				else:
-					continue
-			print(f"File name requested by client is {req_pac.packet.split('~')[8]}")
-			return req_pac.packet.split("~")[8]
-		return 0
+		self.window_size = window_size
+		self.buffer_size = buffer_size
 
 	## Send packet to client or send acknowledgement to server
 	#
@@ -103,13 +50,10 @@ class Connection:
 	def send(self,packet,target_host,port):
 		packet_params = packet.packet.split('~')
 		pno = packet_params[4]
-		# packet_bytes = packet.packet.encode("ascii")
-		# base64_bytes = base64.b64encode(packet_bytes)
-		# base64_string = base64_bytes.decode("ascii")
 		self.s.sendto(bytes(packet.packet, encoding="utf-8"),(str(target_host),int(port)))
-		if(packet_params[3]=="0" and packet_params[1]!="1"):
+		if(packet_params[3]=="False" and packet_params[1]!="True" and packet_params[2]!="True"):
 			print(f"Sent packet {pno}")
-		elif(packet_params[3]=="1" and packet_params[1]!="1"):
+		elif(packet_params[3]=="True" and packet_params[1]!="True" and packet_params[2]!="True"):
 			print(f"Sent ACK {packet_params[5]}")
 
 	## Bind server/client
@@ -130,22 +74,13 @@ class Connection:
 	def recv(self,target_host,port):
 		chunk,addr = self.s.recvfrom(self.packet_size)
 		chunk = chunk.decode(encoding='utf-8')
-		# base64_string = str(chunk)
-		# base64_bytes = chunk.decode("ascii")
-		# ascii_string_bytes = base64.b64decode(chunk)
-		# recvd_string = ascii_string_bytes.decode("ascii")
-		# packet_params = recvd_string.split('~')
 		chunk = str(chunk)
 		packet_params = chunk.split("~")
 		pno = packet_params[4]
-		checksum = packet_params[7]
-		if(self.verifyChecksum(chunk,packet_params[7])==False):
+		checksum = packet_params[6]
+		if(self.verifyChecksum(chunk,packet_params[6])==False):
 			print(f"Packet {pno} compromised")
 			return None
-		elif(packet_params[1]=="0" and packet_params[2]=="0" and packet_params[3]=="0"):  # and packet_params[4]!="4" Add packet number here to check for packet loss
-			print(f"Packet {pno} ok")
-			ack_pack = Packet(0,0,1,0,pno,bytes("ACK Packet", 'utf-8'))
-			self.send(ack_pack,target_host,port)
 		recvd_packet = Packet(packet_params[1],packet_params[2],packet_params[3],packet_params[4],packet_params[5],bytes(packet_params[8],'utf-8'))
 		return recvd_packet
 
@@ -175,7 +110,7 @@ class Connection:
 		temp += "~"
 		temp += packet_params[5]
 		temp += "~"
-		temp += packet_params[6]
+		temp += packet_params[7]
 		temp += "~"
 		temp += packet_params[8]
 		cc =  (((mmh3.hash(temp))) % (1<<16))
@@ -194,8 +129,8 @@ class Packet:
 	## payload of the packet
 	payload = b""
 	## header of the packet
-	header = "1~"
-	## packet body
+	header = "True~"
+	## packet string
 	packet = ""
 	## SYN bit
 	SYN = 0
@@ -224,15 +159,26 @@ class Packet:
 	#  @param ANO the ANO bit
 	#  @param payload the payload of the packet
 	def __init__(self,SYN,FIN,ACK,PNO,ANO,payload):
+		if(SYN==1 or SYN=="True"):
+			self.SYN = True
+		else:
+			self.SYN = False
+		
+		if(FIN==1 or FIN=="True"):
+			self.FIN = True
+		else:
+			self.FIN = False
 
-		self.SYN = SYN
-		self.FIN = FIN
-		self.ACK = ACK
-		self.header += str(SYN)
+		if(ACK==1 or ACK=="True"):
+			self.ACK = True
+		else:
+			self.ACK = False
+
+		self.header += str(self.SYN)
 		self.header += "~"
-		self.header += str(FIN)
+		self.header += str(self.FIN)
 		self.header += "~"
-		self.header += str(ACK)
+		self.header += str(self.ACK)
 		self.header += "~"
 		self.header += str(PNO)
 		self.header += "~"
@@ -240,11 +186,11 @@ class Packet:
 		self.header += "~"
 		self.payload = payload
 		temp_str = str(self.payload.decode(encoding='utf-8'))
-		self.body_length = len(temp_str)
-		self.header += str(self.body_length)
-		self.header += "~"
 		self.checksum = self.computeChecksum()
 		self.header += str(self.checksum)
+		self.header += "~"
+		self.body_length = len(temp_str)
+		self.header += str(self.body_length)
 		self.header += "~"
 		self.packet += self.header
 		self.packet += temp_str
@@ -257,7 +203,7 @@ class Packet:
 
 	## computes checksum value after decoding the packet
 	def computeChecksum(self):
-		temp = self.header + str(self.payload.decode(encoding='utf-8'))
+		temp = self.header + str(len(str(self.payload.decode(encoding='utf-8')))) + "~" + str(self.payload.decode(encoding='utf-8'))
 		return (((mmh3.hash(temp))) % (1<<16))
 
 

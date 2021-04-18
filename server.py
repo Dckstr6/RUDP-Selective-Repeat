@@ -4,6 +4,7 @@ import math
 import time
 import threading
 import os
+import sys
 import base64
 
 ##  Server class
@@ -47,6 +48,10 @@ class Server:
     send_base = 0
     ## server timeout
     serv_timeout = 0
+    ## Filename
+    filename = 0
+
+    buffer_size = 0
 
 
     ## The constructor for the Server class
@@ -66,7 +71,8 @@ class Server:
     # @param serv_timeout server timeout time in seconds
     # @param packet_size packet size
     # @param body_size body size
-    def __init__(self,self_host,self_port,target_host,target_port,retransmission_counter,window_size,sleep_time,serv_timeout=30,packet_size=10024,body_size=8000):
+    # @param buffer_size buffer size
+    def __init__(self,self_host,self_port,target_host,target_port,retransmission_counter,window_size,sleep_time,serv_timeout=30,packet_size=10024,buffer_size=6,body_size=8000):
         self.target_host = str(target_host)
         self.target_port = target_port
         self.self_host = str(self_host)
@@ -78,14 +84,34 @@ class Server:
         self.serv_timeout = serv_timeout
         self.packet_size = packet_size
         self.body_size = body_size
-        self.s = RUDP.Connection(timeoutval=self.serv_timeout,packet_size=self.packet_size)
-
+        self.buffer_size = buffer_size
+        self.s = RUDP.Connection(timeoutval=self.serv_timeout,packet_size=self.packet_size,window_size=self.window_size,buffer_size=self.buffer_size)
         self.s.bind(self.self_host,self.self_port)
-        file_name = self.s.listen(self.target_host,self.target_port)
+        self.is_fin_acked = 0
+
+        while(True):
+            conn_pac = self.s.recv(self.target_host,self.target_port)
+            if(conn_pac is not None and conn_pac.packet.split("~")[1]=="True" and conn_pac.packet.split("~")[8]=="First Packet"):
+                print("Client Connection Request Received")
+                ack_pac = RUDP.Packet(1,0,1,0,0,bytes("ACK Packet", 'utf-8'))
+                self.s.send(ack_pac,self.target_host,self.target_port)
+                continue
+            elif(conn_pac is not None and conn_pac.packet.split("~")[1]=="False"):
+                self.filename = conn_pac.packet.split("~")[8]
+                print(f"Filename requested is {self.filename}")
+                break
         count = 0
-        with open(file_name,"rb") as file:
-            string_data = file.read()
-            self.total_data = base64.encodebytes(string_data)
+        try:
+            with open(self.filename,"rb") as file:
+                string_data = file.read()
+                self.total_data = base64.encodebytes(string_data)
+        except IOError:
+            print(f"Error File {self.filename} not found")
+            self.end_connection()
+            finack = self.s.recv(self.target_host,self.target_port)
+            if(finack.packet.split("~")[2]=="True" and finack.packet.split("~")[3]=="True"):
+                print("Received Client termination ACK")
+            os._exit(3)
         self.total_packets = math.ceil(len(self.total_data)/(self.body_size))
         print(f"Total packets are {self.total_packets}")
         for i in range(0,self.total_packets):
@@ -95,16 +121,24 @@ class Server:
         self.last_received_time = time.time()
         thread_timer = threading.Thread(target=self.global_timer,args=())
         thread_timer.start()
-        for i in range(self.total_packets):
-            tx = threading.Thread(target=self.send_this_packet,args=(i,))
-            tx.start()
-            self.all_threads.append(tx)
+        thread_counter = 0
+        while(thread_counter < self.total_packets):
+            if(thread_counter >= self.send_base and thread_counter <= self.send_head):
+                tx = threading.Thread(target=self.send_this_packet,args=(thread_counter,))
+                tx.start()
+                self.all_threads.append(tx)
+                thread_counter += 1
+            else:
+                continue
 
         for i in range(self.total_packets):
             self.all_threads[i].join()
         thread_ack.join()
-
+        print("Server ending connection")
         self.end_connection()
+        finack = self.s.recv(self.target_host,self.target_port)
+        if(finack.packet.split("~")[2]=="True" and finack.packet.split("~")[3]=="True"):
+            print("Received Client termination ACK")
         self.s.close()
         # print(self.total_data)
         os._exit(0)
@@ -115,36 +149,23 @@ class Server:
     #
     # This method when invoked creates the packet, send it and waits for an ACK. Based on the response from the client, the method acts accordingly (as specified in the design documentation) 
     def send_this_packet(self,packet_no):
-        ## variable to store the number of retransmissions
         retries = 0
-        ## the variable that stores information whether the packet has been sent succesfully or not
-        flag = 0
-
-        while(flag==0):
-            if(packet_no >= self.send_base and packet_no <= self.send_head):
-                print(f"Able to send packet {packet_no}")
-                flag = 1
-                while(True):
-                    packet_body = self.total_data[(self.body_size*packet_no):min(self.body_size*(packet_no+1),len(self.total_data))]
-                    # for i in range((self.body_size*packet_no),min(self.body_size*(packet_no+1),len(self.total_data))):
-                    #     packet_body += str(self.total_data[i])
-                    sending_packet = RUDP.Packet(0,0,0,packet_no,0,packet_body)
-                    self.s.send(sending_packet,self.target_host,self.target_port)
-                    time.sleep(self.sleep_time)
-                    if(self.ack_array[packet_no]==1):
-                        break
-                    elif(retries < self.s.max_retransmits):
-                        print(f"ACK for packet {packet_no} is not received, resending packet again ({retries})")
-                        retries += 1
-                        self.s.send(sending_packet,self.target_host,self.target_port)
-                        continue
-                    else:
-                        print("Exceeded maximum retransmits, terminating connection......")
-                        self.end_connection()
-                        os._exit(0)
+        while(True):
+            packet_body = self.total_data[(self.body_size*packet_no):min(self.body_size*(packet_no+1),len(self.total_data))]
+            sending_packet = RUDP.Packet(0,0,0,packet_no,(packet_no % self.buffer_size),packet_body)
+            self.s.send(sending_packet,self.target_host,self.target_port)
+            time.sleep(self.sleep_time)
+            if(self.ack_array[packet_no]==1):
                 break
-            else:
+            elif(retries < self.retransmission_counter):
+                print(f"ACK for packet {packet_no} is not received, resending packet again ({retries})")
+                retries += 1
+                self.s.send(sending_packet,self.target_host,self.target_port)
                 continue
+            else:
+                print("Exceeded maximum retransmits, terminating connection......")
+                self.end_connection()
+                os._exit(2)
         return
     
     ## listen_for_ack Method
@@ -154,8 +175,8 @@ class Server:
     def listen_for_ack(self):
         while(self.number_of_acked_packets < self.total_packets):
             response = self.s.recv(self.target_host,self.target_port)
-            if(response.packet.split("~")[3]=="1"):
-                ack_no = int(response.packet.split("~")[5])
+            if(response.packet.split("~")[3]=="True"):
+                ack_no = int(response.packet.split("~")[4])
                 print(f"Received ACK for packet {ack_no}")
                 self.mutex.acquire()
                 if(self.ack_array[ack_no]==0):
@@ -186,8 +207,9 @@ class Server:
                 print(f"Timeoutval is {self.s.timeoutval}")
                 print(f"Time.Time is {time.time()}")
                 print(f"Last Received Time is {self.last_received_time}")
-                print("Global Timer exceeded")
-                os._exit(0)
+                print("Global Timer exceeded, ending connection")
+                self.end_connection()
+                os._exit(1)
 
     ## end_connection Method
     # @param self is the object pointer
@@ -196,11 +218,22 @@ class Server:
     def end_connection(self):
         fin_packet = RUDP.Packet(0,1,0,0,0,bytes("End Connection", 'utf-8'))
         self.s.send(fin_packet,self.target_host,self.target_port)
-        print("Server ending connection")
         return
 
 if __name__ == '__main__':
-    s1 = Server("127.0.0.1",65432,"127.0.0.1",65431,5,3,3)
+    # s1 = Server("127.0.0.1",65432,"127.0.0.1",65431,5,3,3)
+        
+    self_host = sys.argv[1]
+    self_port = sys.argv[2]
+    target_host = sys.argv[3]
+    target_port = sys.argv[4]
+    rtc = int(sys.argv[5])
+    window = int(sys.argv[6])
+    rtt = float(sys.argv[7])
+    global_timer = float(sys.argv[8])
+    pkt_size = int(sys.argv[9])
+    buffer_size = int(sys.argv[10])
+    s1 = Server(self_host,self_port,target_host,target_port,rtc,window,rtt,global_timer,pkt_size,buffer_size)
 
 
 
