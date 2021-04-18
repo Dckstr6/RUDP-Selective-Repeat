@@ -54,6 +54,18 @@ class Server:
     # This constructor fills in the values for the class variables and starts with the process of sending the file to the client.
     # It reads the filename from the request and starts reading the file in the folder and encodes it using base64. It then starts sending the encoded file in packets of defined size. It creates threads for sending each of the packets and then wait for ACKs and acts accordingly based on the response. 
     # After all the packets have been sent and ACKed the process of terminating the connection starts and then the connection between server and client is closed.
+    #
+    # @param self is the object pointer
+    # @param self_host server ip
+    # @param self_port server port
+    # @param target_host client ip
+    # @param target_port client port
+    # @param retransmission_counter number of times retransmitted
+    # @param window_size window size
+    # @param sleep_time sleep time: waiting time for an acknowledgement
+    # @param serv_timeout server timeout time in seconds
+    # @param packet_size packet size
+    # @param body_size body size
     def __init__(self,self_host,self_port,target_host,target_port,retransmission_counter,window_size,sleep_time,serv_timeout=30,packet_size=10024,body_size=8000):
         self.target_host = str(target_host)
         self.target_port = target_port

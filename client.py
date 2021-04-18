@@ -39,7 +39,8 @@ class Client:
     ## has the object timed out
     cl_timeout = 0
     ## Class constructor: Sends the connection request and recieves the file requested
-    #
+    #   
+    #  Initializes the client, sends connection request to server, recieves files, stores files, ends connection
     #  @param self_host object ip
     #  @param self_port obejct port
     #  @param target_host target ip
@@ -101,7 +102,7 @@ class Client:
         f.close()
         os._exit(0)
 
-    ## Global Timer: Used to terminate redundant connections
+    ## Global Timer: Used to terminate redundant connections and print time elapsed
     #  @param self Obejct pointer 
     def global_timer(self):
         while(True):
@@ -111,7 +112,7 @@ class Client:
                 print(f"Last Received Time is {self.last_received_time}")
                 print("Global Timer exceeded")
                 os._exit(0)
-    ## to check if object exists?
+    ## to check if object exists
     #  @param self Obejct pointer
     # 
     def check_contiguous(self):
@@ -124,7 +125,7 @@ class Client:
         elap = current_time - self.start_time
         return elap
 
-
+## Start program with server ip, port and client ip, port
 if __name__ == '__main__':
     c1 = Client("127.0.0.1",65431,"127.0.0.1",65432,"sample.png")
 
