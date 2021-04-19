@@ -236,20 +236,3 @@ if __name__ == '__main__':
     bodysize = int(sys.argv[11])
     s1 = Server(self_host,self_port,target_host,target_port,rtc,window,rtt,global_timer,pkt_size,buffer_size,bodysize)
 
-
-
-
-
-
-# {
-#     "bufLen": 20,
-#     "windowSize": 10,
-#     "globalTimer": 1000000,
-#     "packetSize": 10024,
-#     "reTransCount": 3,
-#     "serverIpAddr": "127.0.0.1",
-#     "serverPortNo": 50125,
-#     "clientIpAddr": "127.0.0.1",
-#     "clientPortNo": 50126,
-#     "reqFileName": "Rushabh.mp4"
-# }
