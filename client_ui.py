@@ -257,7 +257,7 @@ class Ui_Client(object):
         if(return_code == 0):
             self.c_status.append(f"File Recieved\nTime Elapsed: {duration} s")
         elif(return_code == 1):
-            self.c_status.append("Retransmission Timeout\n")
+            self.c_status.append("Global Timeout\n")
 
 
 

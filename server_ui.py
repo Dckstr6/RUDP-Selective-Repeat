@@ -261,7 +261,7 @@ class Ui_Server(object):
         if(return_code == 0):
             self.s_status.append(f"File Sent Successfully\nTime Elapsed : {duration} sec")
         elif(return_code == 1):
-            self.s_status.append("Retransmission Timeout\n")
+            self.s_status.append("Global Timeout\n")
         elif(return_code == 2):
             self.s_status.append("Retransmission Limit Exceeded\n")
         elif(return_code == 3):
